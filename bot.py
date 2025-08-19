@@ -16,7 +16,7 @@ intents = discord.Intents.default()
 intents.message_content = True  # Required for commands
 
 # Settings
-TOKEN = os.getenv('DISCORD_TOKEN') or 'YOUR_BOT_TOKEN_HERE'
+TOKEN = os.getenv('DISCORD_TOKEN') or 'MTM5MzY0NTg5MzAzMDI0ODYwOA.GeHTFr.GrAlJKbmhNHb1RXWVJOQjnaCWljN5iDtJVaPns'
 MEME_CHANNEL_ID = None
 INTERVAL_MINUTES = 60
 SUBREDDITS = ['memes', 'dankmemes', 'wholesomememes', 'me_irl', 'ProgrammerHumor']
@@ -212,7 +212,7 @@ async def meme_roulette(ctx):
         await ctx.send("A roleta quebrou... tente novamente mais tarde!")
 
 if __name__ == '__main__':
-    if not TOKEN or TOKEN == 'YOUR_BOT_TOKEN_HERE':
+    if not TOKEN or TOKEN == 'MTM5MzY0NTg5MzAzMDI0ODYwOA.GeHTFr.GrAlJKbmhNHb1RXWVJOQjnaCWljN5iDtJVaPns':
         print("ERRO: Token do Discord não configurado!")
         print("Por favor, defina DISCORD_TOKEN no arquivo .env ou no código")
     else:
