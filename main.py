@@ -14,6 +14,8 @@ load_dotenv()
 
 # Configure intents
 intents = discord.Intents.default()
+intents.members = True
+bot = commands.Bot(command_prefix='&', intents=intents)
 intents.message_content = True  # Required for commands
 
 # Settings
