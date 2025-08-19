@@ -220,17 +220,25 @@ if __name__ == '__main__':
 
 @bot.command()
 async def ship(ctx, user1: discord.Member, user2: discord.Member):
+    # Gera a porcentagem de compatibilidade
     porcentagem = random.randint(0, 100)
 
+    # Embed principal
     embed = discord.Embed(
         title="💖 Ship do Dia 💖",
         description=f"{user1.mention} + {user2.mention} = **{porcentagem}% compatíveis!**",
         color=0xff69b4
     )
 
-    # Adiciona imagens dos avatares
+    # Avatares dos usuários
     embed.set_thumbnail(url=user1.avatar.url)
-    embed.set_image(url=user2.avatar.url)  # Você pode trocar por uma imagem de coração ou meme
+    
+    # Imagem do coração central (pode ser qualquer GIF ou PNG online)
+    coracao_url = "https://i.imgur.com/4M7IWwP.png"  # Exemplo de coração
+    embed.set_image(url=coracao_url)
+
+    # Texto final com o segundo usuário (opcional)
+    embed.set_footer(text=f"Shipper: {user2.display_name}", icon_url=user2.avatar.url)
 
     await ctx.send(embed=embed)
 
