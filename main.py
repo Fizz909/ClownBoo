@@ -63,13 +63,6 @@ async def fetch_random_meme(avoid_nsfw=True):
         print(f"Error fetching meme: {e}")
     return None
 
-@bot.event
-async def on_ready():
-    print(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
-    print('------')
-    if not send_meme.is_running() and MEME_CHANNEL_ID:
-        send_meme.start()
-
 @tasks.loop(minutes=INTERVAL_MINUTES)
 async def send_meme():
     if MEME_CHANNEL_ID is None:
@@ -224,6 +217,22 @@ if __name__ == '__main__':
             print("Falha no login: Token inválido/incorreto")
         except Exception as e:
             print(f"Erro inesperado: {type(e).__name__}: {e}")
+
+@bot.command()
+async def ship(ctx, user1: discord.Member, user2: discord.Member):
+    porcentagem = random.randint(0, 100)
+
+    embed = discord.Embed(
+        title="💖 Ship do Dia 💖",
+        description=f"{user1.mention} + {user2.mention} = **{porcentagem}% compatíveis!**",
+        color=0xff69b4
+    )
+
+    # Adiciona imagens dos avatares
+    embed.set_thumbnail(url=user1.avatar.url)
+    embed.set_image(url=user2.avatar.url)  # Você pode trocar por uma imagem de coração ou meme
+
+    await ctx.send(embed=embed)
 
 @bot.event
 async def on_ready():
