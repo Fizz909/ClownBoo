@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 from keep_alive import keep_alive
+import html  # Para decodificar entidades HTML (&quot;, &amp;, etc.)
+
 keep_alive()
 
 # Load environment variables
@@ -239,6 +241,47 @@ async def ship(ctx, user1: discord.Member, user2: discord.Member):
     embed.set_footer(text=f"Shipper: {user2.display_name}", icon_url=user2.avatar.url)
 
     await ctx.send(embed=embed)
+
+@bot.command()
+async def trivia(ctx, perguntas: int = 3):
+    """
+    Jogo de trivia com perguntas da API.
+    Use &trivia <número_de_perguntas> para jogar.
+    """
+    score = 0
+
+    async with aiohttp.ClientSession() as session:
+        for i in range(perguntas):
+            url = "https://opentdb.com/api.php?amount=1&type=multiple&category=9"
+            async with session.get(url) as resp:
+                data = await resp.json()
+                if data["response_code"] != 0:
+                    await ctx.send("Não consegui buscar perguntas da API agora...")
+                    return
+
+                q = data["results"][0]
+                pergunta = html.unescape(q["question"])
+                opcoes = [html.unescape(ans) for ans in q["incorrect_answers"]] + [html.unescape(q["correct_answer"])]
+                random.shuffle(opcoes)
+                resposta = html.unescape(q["correct_answer"])
+
+                op_texto = "\n".join([f"{idx+1}. {opt}" for idx, opt in enumerate(opcoes)])
+                await ctx.send(f"**Pergunta {i+1}/{perguntas}**\n{pergunta}\n{op_texto}\n(Responda com o número da opção)")
+
+                def check(m):
+                    return m.author == ctx.author and m.content.isdigit()
+
+                try:
+                    msg = await bot.wait_for("message", check=check, timeout=20)
+                    if opcoes[int(msg.content)-1] == resposta:
+                        await ctx.send("✅ Acertou!")
+                        score += 1
+                    else:
+                        await ctx.send(f"❌ Errou! A resposta correta é: {resposta}")
+                except:
+                    await ctx.send(f"⏰ Tempo esgotado! A resposta correta é: {resposta}")
+
+    await ctx.send(f"🏆 Você terminou! Pontuação final: {score}/{perguntas}")
 
 # -------------------- RUN BOT --------------------
 if __name__ == '__main__':
