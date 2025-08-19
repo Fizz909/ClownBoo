@@ -5,6 +5,7 @@ import asyncio
 import random
 from datetime import datetime, timedelta
 import os
+from discord.ui import View, Button
 from dotenv import load_dotenv
 from keep_alive import keep_alive
 import html  # Para decodificar entidades HTML (&quot;, &amp;, etc.)
@@ -300,62 +301,67 @@ async def random_gif(ctx, *, termo="meme"):
         print(e)
         await ctx.send("❌ Ocorreu um erro ao tentar buscar o GIF.")
 
-@bot.command(name='fight')
+class FightButton(Button):
+    def __init__(self, label, user, opponent):
+        super().__init__(label=label, style=discord.ButtonStyle.primary)
+        self.user = user
+        self.opponent = opponent
+        self.dano = random.randint(5, 20)
+
+    async def callback(self, interaction: discord.Interaction):
+        ataques = ["💥", "🔥", "⚡", "😱", "🤡"]
+        frases = [
+            "levou um golpe crítico!",
+            "caiu no chão!",
+            "está confuso 😵",
+            "não acredita no que aconteceu!",
+            "recebeu um ataque secreto!"
+        ]
+        
+        result = f"{self.user.display_name} {random.choice(frases)} {random.choice(ataques)} (-{self.dano} HP para {self.opponent.display_name})"
+        await interaction.response.send_message(result, ephemeral=False)
+        self.disabled = True
+        await interaction.message.edit(view=self.view)
+
+@bot.command()
 async def fight(ctx, user1: discord.Member, user2: discord.Member):
-    """Simula uma luta divertida e meme entre dois usuários"""
-    hp1 = 100
-    hp2 = 100
-    rounds = random.randint(3, 6)
-    
-    ataques = ["💥", "🔥", "⚡", "😱", "🤡"]
-    frases = [
-        "levou um golpe crítico!", 
-        "caiu no chão!", 
-        "está confuso 😵", 
-        "não acredita no que aconteceu!", 
-        "recebeu um ataque secreto!"
-    ]
-    
-    log = ""
-    for i in range(1, rounds+1):
-        dano1 = random.randint(10, 25)
-        dano2 = random.randint(10, 25)
-        hp2 -= dano1
-        hp1 -= dano2
-        
-        log += (
-            f"**Round {i}**:\n"
-            f"{user1.display_name} {random.choice(frases)} {random.choice(ataques)} (-{dano1} HP)\n"
-            f"{user2.display_name} {random.choice(frases)} {random.choice(ataques)} (-{dano2} HP)\n\n"
-        )
-        
-        # Checa se alguém morreu antes do último round
-        if hp1 <= 0 or hp2 <= 0:
-            break
-
-    if hp1 > hp2:
-        vencedor = f"🏆 {user1.display_name} venceu!"
-    elif hp2 > hp1:
-        vencedor = f"🏆 {user2.display_name} venceu!"
-    else:
-        vencedor = "🤝 Empate épico!"
-
-    gifs_vitoria = [
-        "https://media.giphy.com/media/26xBwdIuRJiAIqHwA/giphy.gif",
-        "https://media.giphy.com/media/3o6ZsXjCgX3h60YJ6k/giphy.gif",
-        "https://media.giphy.com/media/l3vR85PnGsBwu1PFK/giphy.gif"
-    ]
+    """Luta interativa com botões entre dois usuários"""
     
     embed = discord.Embed(
         title="⚔️ Batalha MemeBot ⚔️",
-        description=log,
+        description=f"{user1.display_name} VS {user2.display_name}\nClique nos botões para atacar!",
         color=discord.Color.random()
     )
-    embed.add_field(name="Resultado", value=vencedor, inline=False)
-    embed.set_image(url=random.choice(gifs_vitoria))
-    
-    await ctx.send(embed=embed)
 
+    view = View(timeout=30)  # Tempo para clicar nos botões
+
+    # Adiciona 2 botões de ataque (um para cada usuário)
+    view.add_item(FightButton(label="Atacar!", user=user1, opponent=user2))
+    view.add_item(FightButton(label="Atacar!", user=user2, opponent=user1))
+
+    await ctx.send(embed=embed, view=view)
+
+@bot.command(name='piada')
+async def piada(ctx):
+    """Envia uma piada aleatória em português"""
+    url = "https://v2.jokeapi.dev/joke/Any?lang=pt&blacklistFlags=nsfw,racist,sexist"
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if data["type"] == "single":
+                        # Piada de uma linha
+                        await ctx.send(f"😂 {data['joke']}")
+                    else:
+                        # Piada em duas partes (setup + delivery)
+                        await ctx.send(f"😂 {data['setup']}\n⏳ ...\n{data['delivery']}")
+                else:
+                    await ctx.send("Não consegui pegar uma piada agora, tente novamente mais tarde!")
+    except Exception as e:
+        print(f"Erro ao buscar piada: {e}")
+        await ctx.send("Ocorreu um erro ao buscar a piada.")
 
 @bot.command(name='help', aliases=['ajuda'])
 async def help_command(ctx):
@@ -375,6 +381,7 @@ async def help_command(ctx):
     embed.add_field(name="&trivia [quantidade]", value="Jogo de perguntas e respostas em português (padrão 3).", inline=False)
     embed.add_field(name="&fight <usuário1> <usuário2>", value="Batalha com memes!!.", inline=False)
     embed.add_field(name="&randomgif", value="GIFs aleatórios de memes.", inline=False)
+    embed.add_field(name="&piada", value="O bot conta uma piada aleatória.", inline=False)
     embed.add_field(name="&help", value="Mostra um painel com os comandos.", inline=False)
 
 
