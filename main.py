@@ -89,6 +89,16 @@ async def send_meme():
         else:
             await channel.send("Não consegui encontrar um meme no momento...")
 
+@bot.event
+async def on_ready():
+    print(f"Logado como {bot.user}")
+    
+    # Status do bot: Jogando memes
+    activity = discord.Game(name="Memes 🤡")
+    await bot.change_presence(status=discord.Status.online, activity=activity)
+
+bot.run(TOKEN)
+
 @bot.command(name='setmemechannel', aliases=['smc'])
 @commands.has_permissions(manage_channels=True)
 async def set_meme_channel(ctx, channel: discord.TextChannel):
@@ -244,12 +254,3 @@ async def ship(ctx, user1: discord.Member, user2: discord.Member):
 
     await ctx.send(embed=embed)
 
-@bot.event
-async def on_ready():
-    print(f"Logado como {bot.user}")
-    
-    # Status do bot: Jogando memes
-    activity = discord.Game(name="Memes 🤡")
-    await bot.change_presence(status=discord.Status.online, activity=activity)
-
-bot.run(TOKEN)
