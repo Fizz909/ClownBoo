@@ -224,3 +224,13 @@ if __name__ == '__main__':
             print("Falha no login: Token inválido/incorreto")
         except Exception as e:
             print(f"Erro inesperado: {type(e).__name__}: {e}")
+
+@bot.event
+async def on_ready():
+    print(f"Logado como {bot.user}")
+    
+    # Status do bot: Jogando memes
+    activity = discord.Game(name="Memes 🤡")
+    await bot.change_presence(status=discord.Status.online, activity=activity)
+
+bot.run(TOKEN)
