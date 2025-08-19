@@ -94,11 +94,15 @@ async def send_meme():
 
 @bot.event
 async def on_ready():
-    print(f"Logado como {bot.user}")
-    
-    # Status do bot: Jogando memes
-    activity = discord.Game(name="Memes 🤡")
-    await bot.change_presence(status=discord.Status.online, activity=activity)
+    print(f"Bot logado como {bot.user}")
+    # Status mostrando em quantos servidores o bot está
+    guild_count = len(bot.guilds)
+    activity = discord.Activity(
+        type=discord.ActivityType.watching, 
+        name=f"{guild_count} servidores rindo 🤡"
+    )
+    await bot.change_presence(activity=activity)
+    print("Status atualizado!")
 
 @bot.command(name='setmemechannel', aliases=['smc'])
 @commands.has_permissions(manage_channels=True)
