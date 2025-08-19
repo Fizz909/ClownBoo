@@ -212,7 +212,7 @@ async def meme_roulette(ctx):
         await ctx.send("A roleta quebrou... tente novamente mais tarde!")
 
 if __name__ == '__main__':
-    if not TOKEN or TOKEN == 'MTM5MzY0NTg5MzAzMDI0ODYwOA.GeHTFr.GrAlJKbmhNHb1RXWVJOQjnaCWljN5iDtJVaPns':
+    if not TOKEN or TOKEN == 'YOUR_BOT_TOKEN_HERE':
         print("ERRO: Token do Discord não configurado!")
         print("Por favor, defina DISCORD_TOKEN no arquivo .env ou no código")
     else:
