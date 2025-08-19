@@ -300,6 +300,63 @@ async def random_gif(ctx, *, termo="meme"):
         print(e)
         await ctx.send("❌ Ocorreu um erro ao tentar buscar o GIF.")
 
+@bot.command(name='fight')
+async def fight(ctx, user1: discord.Member, user2: discord.Member):
+    """Simula uma luta divertida e meme entre dois usuários"""
+    hp1 = 100
+    hp2 = 100
+    rounds = random.randint(3, 6)
+    
+    ataques = ["💥", "🔥", "⚡", "😱", "🤡"]
+    frases = [
+        "levou um golpe crítico!", 
+        "caiu no chão!", 
+        "está confuso 😵", 
+        "não acredita no que aconteceu!", 
+        "recebeu um ataque secreto!"
+    ]
+    
+    log = ""
+    for i in range(1, rounds+1):
+        dano1 = random.randint(10, 25)
+        dano2 = random.randint(10, 25)
+        hp2 -= dano1
+        hp1 -= dano2
+        
+        log += (
+            f"**Round {i}**:\n"
+            f"{user1.display_name} {random.choice(frases)} {random.choice(ataques)} (-{dano1} HP)\n"
+            f"{user2.display_name} {random.choice(frases)} {random.choice(ataques)} (-{dano2} HP)\n\n"
+        )
+        
+        # Checa se alguém morreu antes do último round
+        if hp1 <= 0 or hp2 <= 0:
+            break
+
+    if hp1 > hp2:
+        vencedor = f"🏆 {user1.display_name} venceu!"
+    elif hp2 > hp1:
+        vencedor = f"🏆 {user2.display_name} venceu!"
+    else:
+        vencedor = "🤝 Empate épico!"
+
+    gifs_vitoria = [
+        "https://media.giphy.com/media/26xBwdIuRJiAIqHwA/giphy.gif",
+        "https://media.giphy.com/media/3o6ZsXjCgX3h60YJ6k/giphy.gif",
+        "https://media.giphy.com/media/l3vR85PnGsBwu1PFK/giphy.gif"
+    ]
+    
+    embed = discord.Embed(
+        title="⚔️ Batalha MemeBot ⚔️",
+        description=log,
+        color=discord.Color.random()
+    )
+    embed.add_field(name="Resultado", value=vencedor, inline=False)
+    embed.set_image(url=random.choice(gifs_vitoria))
+    
+    await ctx.send(embed=embed)
+
+
 @bot.command(name='help', aliases=['ajuda'])
 async def help_command(ctx):
     embed = discord.Embed(
@@ -316,7 +373,8 @@ async def help_command(ctx):
     embed.add_field(name="&memestatus", value="Mostra o status atual do bot e do canal de memes.", inline=False)
     embed.add_field(name="&ship <usuário1> <usuário2>", value="Mostra a compatibilidade entre dois usuários.", inline=False)
     embed.add_field(name="&trivia [quantidade]", value="Jogo de perguntas e respostas em português (padrão 3).", inline=False)
-    embed.add_field(name="&fight <usuário1> <usuário2>", value="GIFs aleatórios de memes.", inline=False)
+    embed.add_field(name="&fight <usuário1> <usuário2>", value="Batalha com memes!!.", inline=False)
+    embed.add_field(name="&randomgif", value="GIFs aleatórios de memes.", inline=False)
     embed.add_field(name="&help", value="Mostra um painel com os comandos.", inline=False)
 
 
