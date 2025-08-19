@@ -283,6 +283,23 @@ async def trivia(ctx, perguntas: int = 3):
 
     await ctx.send(f"🏆 Você terminou! Pontuação final: {pontuacao}/{perguntas}")
 
+@bot.command(name='randomgif')
+async def random_gif(ctx, *, termo="meme"):
+    """Envia um GIF aleatório de meme"""
+    url = f"https://g.tenor.com/v1/search?q={termo}&key=LIVDSRZULELA&limit=10"  # Key pública de teste
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    gif = random.choice(data['results'])
+                    await ctx.send(gif['media'][0]['gif']['url'])
+                else:
+                    await ctx.send("❌ Não consegui pegar um GIF agora...")
+    except Exception as e:
+        print(e)
+        await ctx.send("❌ Ocorreu um erro ao tentar buscar o GIF.")
+
 @bot.command(name='help', aliases=['ajuda'])
 async def help_command(ctx):
     embed = discord.Embed(
@@ -299,6 +316,10 @@ async def help_command(ctx):
     embed.add_field(name="&memestatus", value="Mostra o status atual do bot e do canal de memes.", inline=False)
     embed.add_field(name="&ship <usuário1> <usuário2>", value="Mostra a compatibilidade entre dois usuários.", inline=False)
     embed.add_field(name="&trivia [quantidade]", value="Jogo de perguntas e respostas em português (padrão 3).", inline=False)
+    embed.add_field(name="&fight <usuário1> <usuário2>", value="GIFs aleatórios de memes.", inline=False)
+    embed.add_field(name="&help", value="Mostra um painel com os comandos.", inline=False)
+
+
 
     embed.set_footer(text="MemeBot 🤡 | Divirta-se com os memes!")
     await ctx.send(embed=embed)
