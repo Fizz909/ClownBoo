@@ -245,25 +245,25 @@ async def ship(ctx, user1: discord.Member, user2: discord.Member):
 @bot.command()
 async def trivia(ctx, perguntas: int = 3):
     """
-    Jogo de trivia com perguntas da API.
+    Jogo de trivia em português usando a API Open Trivia DB.
     Use &trivia <número_de_perguntas> para jogar.
     """
-    score = 0
+    pontuacao = 0
 
     async with aiohttp.ClientSession() as session:
         for i in range(perguntas):
-            url = "https://opentdb.com/api.php?amount=1&type=multiple&category=9"
+            url = "https://opentdb.com/api.php?amount=1&type=multiple&category=9&lang=pt"
             async with session.get(url) as resp:
                 data = await resp.json()
                 if data["response_code"] != 0:
-                    await ctx.send("Não consegui buscar perguntas da API agora...")
+                    await ctx.send("Não consegui buscar perguntas da API no momento...")
                     return
 
                 q = data["results"][0]
                 pergunta = html.unescape(q["question"])
                 opcoes = [html.unescape(ans) for ans in q["incorrect_answers"]] + [html.unescape(q["correct_answer"])]
                 random.shuffle(opcoes)
-                resposta = html.unescape(q["correct_answer"])
+                resposta_correta = html.unescape(q["correct_answer"])
 
                 op_texto = "\n".join([f"{idx+1}. {opt}" for idx, opt in enumerate(opcoes)])
                 await ctx.send(f"**Pergunta {i+1}/{perguntas}**\n{pergunta}\n{op_texto}\n(Responda com o número da opção)")
@@ -273,15 +273,36 @@ async def trivia(ctx, perguntas: int = 3):
 
                 try:
                     msg = await bot.wait_for("message", check=check, timeout=20)
-                    if opcoes[int(msg.content)-1] == resposta:
+                    if opcoes[int(msg.content)-1] == resposta_correta:
                         await ctx.send("✅ Acertou!")
-                        score += 1
+                        pontuacao += 1
                     else:
-                        await ctx.send(f"❌ Errou! A resposta correta é: {resposta}")
+                        await ctx.send(f"❌ Errou! A resposta correta é: {resposta_correta}")
                 except:
-                    await ctx.send(f"⏰ Tempo esgotado! A resposta correta é: {resposta}")
+                    await ctx.send(f"⏰ Tempo esgotado! A resposta correta é: {resposta_correta}")
 
-    await ctx.send(f"🏆 Você terminou! Pontuação final: {score}/{perguntas}")
+    await ctx.send(f"🏆 Você terminou! Pontuação final: {pontuacao}/{perguntas}")
+
+@bot.command(name='help', aliases=['ajuda'])
+async def help_command(ctx):
+    embed = discord.Embed(
+        title="📜 Lista de Comandos do MemeBot",
+        description="Aqui estão os comandos disponíveis:",
+        color=discord.Color.green()
+    )
+
+    embed.add_field(name="&meme", value="Mostra um meme aleatório imediatamente.", inline=False)
+    embed.add_field(name="&memebomb <número>", value="Envia vários memes de uma vez (máx 10).", inline=False)
+    embed.add_field(name="&dailymeme", value="Receba seu meme diário exclusivo.", inline=False)
+    embed.add_field(name="&memeroulette", value="Roleta de memes: sorte ou azar!", inline=False)
+    embed.add_field(name="&setmemechannel <canal>", value="Define o canal de memes e ativa auto-postagem.", inline=False)
+    embed.add_field(name="&memestatus", value="Mostra o status atual do bot e do canal de memes.", inline=False)
+    embed.add_field(name="&ship <usuário1> <usuário2>", value="Mostra a compatibilidade entre dois usuários.", inline=False)
+    embed.add_field(name="&trivia [quantidade]", value="Jogo de perguntas e respostas em português (padrão 3).", inline=False)
+
+    embed.set_footer(text="MemeBot 🤡 | Divirta-se com os memes!")
+    await ctx.send(embed=embed)
+
 
 # -------------------- RUN BOT --------------------
 if __name__ == '__main__':
