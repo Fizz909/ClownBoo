@@ -20,7 +20,8 @@ intents.message_content = True  # Required for commands
 TOKEN = os.getenv('DISCORD_TOKEN') or 'YOUR_BOT_TOKEN_HERE'
 MEME_CHANNEL_ID = None
 INTERVAL_MINUTES = 60
-SUBREDDITS = ['memes', 'dankmemes', 'wholesomememes', 'me_irl', 'ProgrammerHumor']
+SUBREDDITS = ['memes', 'dankmemes', 'wholesomememes', 'me_irl', 'ProgrammerHumor', 
+              'MemesBrasil', 'Brasil', 'porramauricio', 'suddenlycaralho', 'MemesBR']
 MEME_HISTORY = []
 COOLDOWNS = {}
 
