@@ -97,7 +97,6 @@ async def on_ready():
     activity = discord.Game(name="Memes 🤡")
     await bot.change_presence(status=discord.Status.online, activity=activity)
 
-
 @bot.command(name='setmemechannel', aliases=['smc'])
 @commands.has_permissions(manage_channels=True)
 async def set_meme_channel(ctx, channel: discord.TextChannel):
@@ -167,7 +166,7 @@ async def meme_bomb(ctx, amount: int = 5):
             embed.set_image(url=meme['url'])
             embed.set_footer(text=f"Meme {i+1}/{amount} | r/{meme['subreddit']}")
             await ctx.send(embed=embed)
-            await asyncio.sleep(1)  # Agora funcionará corretamente
+            await asyncio.sleep(1)
 
 @bot.command(name='dailymeme')
 async def daily_meme(ctx):
@@ -217,18 +216,6 @@ async def meme_roulette(ctx):
     else:
         await ctx.send("A roleta quebrou... tente novamente mais tarde!")
 
-if __name__ == '__main__':
-    if not TOKEN or TOKEN == 'YOUR_BOT_TOKEN_HERE':
-        print("ERRO: Token do Discord não configurado!")
-        print("Por favor, defina DISCORD_TOKEN no arquivo .env ou no código")
-    else:
-        try:
-            bot.run(TOKEN)
-        except discord.errors.LoginFailure:
-            print("Falha no login: Token inválido/incorreto")
-        except Exception as e:
-            print(f"Erro inesperado: {type(e).__name__}: {e}")
-
 @bot.command()
 async def ship(ctx, user1: discord.Member, user2: discord.Member):
     # Gera a porcentagem de compatibilidade
@@ -245,7 +232,7 @@ async def ship(ctx, user1: discord.Member, user2: discord.Member):
     embed.set_thumbnail(url=user1.avatar.url)
     
     # Imagem do coração central (pode ser qualquer GIF ou PNG online)
-    coracao_url = "https://i.imgur.com/4M7IWwP.png"  # Exemplo de coração
+    coracao_url = "https://i.imgur.com/4M7IWwP.png"
     embed.set_image(url=coracao_url)
 
     # Texto final com o segundo usuário (opcional)
@@ -253,4 +240,15 @@ async def ship(ctx, user1: discord.Member, user2: discord.Member):
 
     await ctx.send(embed=embed)
 
-bot.run(TOKEN)
+# -------------------- RUN BOT --------------------
+if __name__ == '__main__':
+    if not TOKEN or TOKEN == 'YOUR_BOT_TOKEN_HERE':
+        print("ERRO: Token do Discord não configurado!")
+        print("Por favor, defina DISCORD_TOKEN no arquivo .env ou no código")
+    else:
+        try:
+            bot.run(TOKEN)
+        except discord.errors.LoginFailure:
+            print("Falha no login: Token inválido/incorreto")
+        except Exception as e:
+            print(f"Erro inesperado: {type(e).__name__}: {e}")
