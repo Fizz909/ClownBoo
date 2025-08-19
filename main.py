@@ -15,8 +15,8 @@ load_dotenv()
 # Configure intents
 intents = discord.Intents.default()
 intents.members = True
-bot = commands.Bot(command_prefix='&', intents=intents)
-intents.message_content = True  # Required for commands
+intents.message_content = True
+bot = commands.Bot(command_prefix='&', intents=intents, help_command=None)
 
 # Settings
 TOKEN = os.getenv('DISCORD_TOKEN') or 'YOUR_BOT_TOKEN_HERE'
@@ -97,7 +97,6 @@ async def on_ready():
     activity = discord.Game(name="Memes 🤡")
     await bot.change_presence(status=discord.Status.online, activity=activity)
 
-bot.run(TOKEN)
 
 @bot.command(name='setmemechannel', aliases=['smc'])
 @commands.has_permissions(manage_channels=True)
@@ -254,3 +253,4 @@ async def ship(ctx, user1: discord.Member, user2: discord.Member):
 
     await ctx.send(embed=embed)
 
+bot.run(TOKEN)
