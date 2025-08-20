@@ -143,7 +143,7 @@ async def meme_status(ctx):
     channel = bot.get_channel(MEME_CHANNEL_ID) if MEME_CHANNEL_ID else None
 
     embed = discord.Embed(
-        title="Status do MemeBot",
+        title="Status da ClownBoo",
         color=discord.Color.blue()
     )
     embed.add_field(name="Canal de Memes", value=channel.mention if channel else "Não definido", inline=False)
@@ -332,7 +332,7 @@ async def fight(ctx, user1: discord.Member, user2: discord.Member):
     """Luta interativa com botões entre dois usuários"""
     
     embed = discord.Embed(
-        title="⚔️ Batalha MemeBot ⚔️",
+        title="⚔️ Batalha ClownBoo ⚔️",
         description=f"{user1.display_name} VS {user2.display_name}\nClique nos botões para atacar!",
         color=discord.Color.random()
     )
@@ -370,7 +370,7 @@ async def piada(ctx):
 @bot.command(name='help', aliases=['ajuda'])
 async def help_command(ctx):
     embed = discord.Embed(
-        title="📜 Lista de Comandos do MemeBot",
+        title="📜 Lista de Comandos da ClownBoo",
         description="Aqui estão os comandos disponíveis:",
         color=discord.Color.green()
     )
@@ -390,7 +390,7 @@ async def help_command(ctx):
 
 
 
-    embed.set_footer(text="MemeBot 🤡 | Divirta-se com os memes!")
+    embed.set_footer(text="ClownBoo 🤡 | Divirta-se com os memes!")
     await ctx.send(embed=embed)
 
 
