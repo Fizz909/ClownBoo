@@ -1,4 +1,4 @@
-# 🤡 MemeBot
+# 🤡 ClownBoo
 
 Um bot divertido que abastece seu servidor com **memes diários, clássicos ou aleatórios**!
 
@@ -24,4 +24,4 @@ Um bot divertido que abastece seu servidor com **memes diários, clássicos ou a
 ---
 
 ![Imagem Bakery](MemeBot.png)
-**Sem graça? Chama o MemeBot!**
+**Sem graça? Chama a ClownBoo!**
