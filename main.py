@@ -99,7 +99,7 @@ async def on_ready():
     guild_count = len(bot.guilds)
     activity = discord.Activity(
         type=discord.ActivityType.watching, 
-        name=f"{guild_count} servidores rindo 🤡"
+        name=f"{guild_count} Servidores Rindo 🤡"
     )
     await bot.change_presence(activity=activity)
     print("Status atualizado!")
