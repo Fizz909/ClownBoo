@@ -404,15 +404,16 @@ async def help_command(ctx):
 
 # -------------------- RUN BOT --------------------
 
-bot.add_cog(Creditos(bot))
+async def main():
+    await bot.add_cog(Creditos(bot))  # ✅ Agora é await
+    await bot.start(TOKEN)
 
 if __name__ == '__main__':
     if not TOKEN or TOKEN == 'YOUR_BOT_TOKEN_HERE':
         print("ERRO: Token do Discord não configurado!")
-        print("Por favor, defina DISCORD_TOKEN no arquivo .env ou no código")
     else:
         try:
-            bot.run(TOKEN)
+            asyncio.run(main())
         except discord.errors.LoginFailure:
             print("Falha no login: Token inválido/incorreto")
         except Exception as e:
