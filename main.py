@@ -96,22 +96,19 @@ async def send_meme():
 @bot.event
 async def on_ready():
     print(f"Bot logado como {bot.user}")
-
-    # Sincronizar slash commands
     try:
         await bot.tree.sync()
         print("Slash commands sincronizados!")
     except Exception as e:
         print(f"Erro ao sincronizar slash commands: {e}")
 
-    # Status mostrando em quantos servidores o bot está
     guild_count = len(bot.guilds)
     activity = discord.Activity(
         type=discord.ActivityType.watching, 
         name=f"{guild_count} Servidores Rindo 🤡"
     )
     await bot.change_presence(activity=activity)
-    print("Status atualizado!")
+
 
 # -------------------- COMANDOS PREFIXADOS --------------------
 @bot.command(name='setmemechannel', aliases=['smc'])
@@ -371,6 +368,11 @@ class Creditos(commands.Cog):
         embed.add_field(name="💬 Suporte", value="[Servidor Discord](https://clownboo.netlify.app/)", inline=False)
         embed.set_footer(text="Feito com ❤ para a comunidade")
         await interaction.response.send_message(embed=embed, ephemeral=False)
+
+    # ✅ Registra o comando no tree quando o cog é carregado
+    async def cog_load(self):
+        self.bot.tree.add_command(self.creditos)
+
 
 
 # -------------------- HELP COMMAND --------------------
