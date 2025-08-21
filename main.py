@@ -96,18 +96,14 @@ async def send_meme():
 @bot.event
 async def on_ready():
     print(f"Bot logado como {bot.user}")
-    try:
-        await bot.tree.sync()
-        print("Slash commands sincronizados!")
-    except Exception as e:
-        print(f"Erro ao sincronizar slash commands: {e}")
 
     guild_count = len(bot.guilds)
     activity = discord.Activity(
-        type=discord.ActivityType.watching, 
+        type=discord.ActivityType.watching,
         name=f"{guild_count} Servidores Rindo 🤡"
     )
     await bot.change_presence(activity=activity)
+    print("Status atualizado!")
 
 
 # -------------------- COMANDOS PREFIXADOS --------------------
