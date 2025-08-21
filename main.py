@@ -330,79 +330,6 @@ async def piada(ctx):
         print(f"Erro ao buscar piada: {e}")
         await ctx.send("Ocorreu um erro ao buscar a piada.")
 
-# -------------------- HUG --------------------
-@bot.command()
-async def hug(ctx, user: discord.Member = None):
-    if not user:
-        await ctx.send("Você precisa mencionar alguém para abraçar! 🤗")
-        return
-
-    query = "anime hug"
-    url = f"https://g.tenor.com/v1/search?q={query}&limit=10"  # Sem chave
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                data = await resp.json()
-                gif_url = random.choice(data['results'])['media'][0]['gif']['url']
-
-        embed = discord.Embed(
-            title=f"{ctx.author.display_name} abraça {user.display_name}! 🤗",
-            color=discord.Color.purple()
-        )
-        embed.set_image(url=gif_url)
-        await ctx.send(embed=embed)
-    except Exception as e:
-        print(f"Erro hug: {e}")
-        await ctx.send("❌ Não consegui pegar um GIF de abraço agora.")
-
-# -------------------- SLAP --------------------
-@bot.command()
-async def slap(ctx, user: discord.Member = None):
-    if not user:
-        await ctx.send("Você precisa mencionar alguém para dar um tapa! 🖐️")
-        return
-
-    query = "anime slap"
-    url = f"https://g.tenor.com/v1/search?q={query}&limit=10"  # Sem chave
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                data = await resp.json()
-                gif_url = random.choice(data['results'])['media'][0]['gif']['url']
-
-        embed = discord.Embed(
-            title=f"{ctx.author.display_name} deu um tapa em {user.display_name}! 😱",
-            color=discord.Color.red()
-        )
-        embed.set_image(url=gif_url)
-        await ctx.send(embed=embed)
-    except Exception as e:
-        print(f"Erro slap: {e}")
-        await ctx.send("❌ Não consegui pegar um GIF de tapa agora.")
-# -------------------- KISS --------------------
-@bot.command()
-async def kiss(ctx, user: discord.Member = None):
-    if not user:
-        await ctx.send("Você precisa mencionar alguém para beijar! 😘")
-        return
-
-    query = "anime kiss"
-    url = f"https://g.tenor.com/v1/search?q={query}&limit=10"  # Sem chave
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                data = await resp.json()
-                gif_url = random.choice(data['results'])['media'][0]['gif']['url']
-
-        embed = discord.Embed(
-            title=f"{ctx.author.display_name} deu um beijo em {user.display_name}! 😘",
-            color=discord.Color.pink()
-        )
-        embed.set_image(url=gif_url)
-        await ctx.send(embed=embed)
-    except Exception as e:
-        print(f"Erro kiss: {e}")
-        await ctx.send("❌ Não consegui pegar um GIF de beijo agora.")
 # -------------------- WEATHER --------------------
 @bot.command()
 async def weather(ctx, *, city: str):
@@ -485,8 +412,6 @@ async def help_command(ctx):
         ("&trivia [quantidade]", "Jogo de perguntas e respostas em português (padrão 3)."),
         ("&randomgif [termo]", "GIFs aleatórios de memes."),
         ("&piada", "O bot conta uma piada aleatória."),
-        ("&&hug <usuário>", "Abraça outro usuário ou o bot se quiser."),
-        ("&slap <usuário>", "Bate em outro usuário."),
         ("&weather <cidade>", "Mostra o clima em alguma cidade."),
         ("&fact", "Mostra um fato aleatório."),
         ("&creditos", "Mostra os créditos do ClownBoo."),
