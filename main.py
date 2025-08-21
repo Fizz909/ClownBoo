@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands, tasks
-from discord import app_commands
 import aiohttp
 import asyncio
 import random
@@ -8,22 +7,23 @@ from datetime import datetime, timedelta
 import os
 from discord.ui import View, Button
 from dotenv import load_dotenv
+import html  # Para decodificar entidades HTML
 from keep_alive import keep_alive
-import html  # Para decodificar entidades HTML (&quot;, &amp;, etc.)
 
+# -------------------- KEEP ALIVE --------------------
 keep_alive()
 
-# Load environment variables
+# -------------------- CONFIG --------------------
 load_dotenv()
+TOKEN = os.getenv('DISCORD_TOKEN') or 'YOUR_BOT_TOKEN_HERE'
 
-# Configure intents
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
+
 bot = commands.Bot(command_prefix='&', intents=intents, help_command=None)
 
-# Settings
-TOKEN = os.getenv('DISCORD_TOKEN') or 'YOUR_BOT_TOKEN_HERE'
+# -------------------- MEMES --------------------
 MEME_CHANNEL_ID = None
 INTERVAL_MINUTES = 60
 SUBREDDITS = [
@@ -34,141 +34,106 @@ SUBREDDITS = [
 MEME_HISTORY = []
 COOLDOWNS = {}
 
-# -------------------- FUNÇÕES --------------------
 async def fetch_random_meme(avoid_nsfw=True):
-    """Fetch random meme from API with NSFW filter"""
     subreddit = random.choice(SUBREDDITS)
     url = f'https://meme-api.com/gimme/{subreddit}'
-
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
-                if response.status == 200:
-                    data = await response.json()
-
-                    if avoid_nsfw and data.get('nsfw', False):
-                        return await fetch_random_meme(avoid_nsfw=True)
-
-                    if data['url'] in MEME_HISTORY:
-                        return await fetch_random_meme(avoid_nsfw)
-
-                    MEME_HISTORY.append(data['url'])
-                    if len(MEME_HISTORY) > 20:
-                        MEME_HISTORY.pop(0)
-
-                    return {
-                        'title': data['title'],
-                        'url': data['url'],
-                        'post_url': data['postLink'],
-                        'subreddit': data['subreddit'],
-                        'nsfw': data.get('nsfw', False)
-                    }
+                if response.status != 200:
+                    return None
+                data = await response.json()
+                if avoid_nsfw and data.get('nsfw', False):
+                    return await fetch_random_meme(avoid_nsfw=True)
+                if data['url'] in MEME_HISTORY:
+                    return await fetch_random_meme(avoid_nsfw)
+                MEME_HISTORY.append(data['url'])
+                if len(MEME_HISTORY) > 20:
+                    MEME_HISTORY.pop(0)
+                return {
+                    'title': data['title'],
+                    'url': data['url'],
+                    'post_url': data['postLink'],
+                    'subreddit': data['subreddit'],
+                    'nsfw': data.get('nsfw', False)
+                }
     except Exception as e:
-        print(f"Error fetching meme: {e}")
-    return None
+        print(f"Erro ao buscar meme: {e}")
+        return None
 
 # -------------------- TASK DE MEMES --------------------
 @tasks.loop(minutes=INTERVAL_MINUTES)
 async def send_meme():
     if MEME_CHANNEL_ID is None:
         return
-
     channel = bot.get_channel(MEME_CHANNEL_ID)
-    if channel:
-        meme = await fetch_random_meme()
-        if meme:
-            embed = discord.Embed(
-                title=meme['title'],
-                color=discord.Color.random()
-            )
-            embed.set_image(url=meme['url'])
-            embed.set_footer(text=f"r/{meme['subreddit']} | Post original")
-
-            try:
-                await channel.send(embed=embed)
-                print(f"{datetime.now().strftime('%H:%M:%S')} - Sent meme from r/{meme['subreddit']}")
-            except Exception as e:
-                print(f"Error sending meme: {e}")
-        else:
-            await channel.send("Não consegui encontrar um meme no momento...")
+    if not channel:
+        return
+    meme = await fetch_random_meme()
+    if meme:
+        embed = discord.Embed(title=meme['title'], color=discord.Color.random())
+        embed.set_image(url=meme['url'])
+        embed.set_footer(text=f"r/{meme['subreddit']} | Post original")
+        try:
+            await channel.send(embed=embed)
+            print(f"{datetime.now().strftime('%H:%M:%S')} - Meme enviado: r/{meme['subreddit']}")
+        except Exception as e:
+            print(f"Erro ao enviar meme: {e}")
 
 # -------------------- EVENTOS --------------------
 @bot.event
 async def on_ready():
     print(f"Bot logado como {bot.user}")
-
     guild_count = len(bot.guilds)
-    activity = discord.Activity(
-        type=discord.ActivityType.watching,
-        name=f"{guild_count} Servidores Rindo 🤡"
-    )
+    activity = discord.Activity(type=discord.ActivityType.watching, name=f"{guild_count} servidores 🤡")
     await bot.change_presence(activity=activity)
     print("Status atualizado!")
 
-
-# -------------------- COMANDOS PREFIXADOS --------------------
+# -------------------- COMANDOS DE MEMES --------------------
 @bot.command(name='setmemechannel', aliases=['smc'])
 @commands.has_permissions(manage_channels=True)
 async def set_meme_channel(ctx, channel: discord.TextChannel):
-    """Set the meme channel and start auto-posting"""
     global MEME_CHANNEL_ID
-
-    permissions = channel.permissions_for(ctx.guild.me)
-    if not permissions.send_messages or not permissions.embed_links:
+    perms = channel.permissions_for(ctx.guild.me)
+    if not (perms.send_messages and perms.embed_links):
         await ctx.send("Preciso de permissões para enviar mensagens e embeds neste canal!")
         return
-
     MEME_CHANNEL_ID = channel.id
     await ctx.send(f"Canal de memes definido para {channel.mention}")
-
     if not send_meme.is_running():
         send_meme.start()
-        await ctx.send("Auto-postagem de memes iniciada")
+        await ctx.send("Auto-postagem de memes iniciada!")
 
 @bot.command(name='meme')
 async def test_meme(ctx):
-    """Test meme posting immediately"""
     meme = await fetch_random_meme()
     if meme:
-        embed = discord.Embed(
-            title=meme['title'],
-            color=discord.Color.random()
-        )
+        embed = discord.Embed(title=meme['title'], color=discord.Color.random())
         embed.set_image(url=meme['url'])
         embed.set_footer(text=f"r/{meme['subreddit']} | Post original")
         await ctx.send(embed=embed)
     else:
-        await ctx.send("Não consegui encontrar um meme para testar...")
+        await ctx.send("Não consegui encontrar um meme.")
 
 @bot.command(name='memestatus')
 async def meme_status(ctx):
-    """Show current bot status"""
     channel = bot.get_channel(MEME_CHANNEL_ID) if MEME_CHANNEL_ID else None
-
-    embed = discord.Embed(
-        title="Status da ClownBoo",
-        color=discord.Color.blue()
-    )
+    embed = discord.Embed(title="Status da ClownBoo", color=discord.Color.blue())
     embed.add_field(name="Canal de Memes", value=channel.mention if channel else "Não definido", inline=False)
     embed.add_field(name="Status", value="ATIVO" if send_meme.is_running() else "PAUSADO", inline=False)
     embed.add_field(name="Intervalo", value=f"A cada {INTERVAL_MINUTES} minutos", inline=False)
     embed.add_field(name="Subreddits", value=", ".join(f"r/{sub}" for sub in SUBREDDITS), inline=False)
-
     if send_meme.is_running():
         next_run = send_meme.next_iteration
         embed.add_field(name="Próximo Post", value=f"<t:{int(next_run.timestamp())}:R>", inline=False)
-
     await ctx.send(embed=embed)
 
 @bot.command(name='memebomb')
 @commands.has_permissions(manage_channels=True)
 async def meme_bomb(ctx, amount: int = 5):
-    """Envia vários memes de uma vez (cuidado!)"""
     if amount > 10:
         amount = 10
-
     await ctx.send(f"Enviando {amount} memes de uma vez!")
-
     for i in range(amount):
         meme = await fetch_random_meme()
         if meme:
@@ -180,24 +145,18 @@ async def meme_bomb(ctx, amount: int = 5):
 
 @bot.command(name='dailymeme')
 async def daily_meme(ctx):
-    """Get your exclusive daily meme!"""
     user_id = ctx.author.id
     last_daily = COOLDOWNS.get(f'daily_{user_id}')
-
     if last_daily and (datetime.now() - last_daily) < timedelta(hours=24):
         next_daily = last_daily + timedelta(hours=24)
         await ctx.send(f"Seu próximo meme diário estará disponível <t:{int(next_daily.timestamp())}:R>!")
         return
-
     meme = await fetch_random_meme()
     if meme:
         COOLDOWNS[f'daily_{user_id}'] = datetime.now()
-
-        embed = discord.Embed(
-            title=f"Meme Diário de {ctx.author.display_name}",
-            description=meme['title'],
-            color=discord.Color.gold()
-        )
+        embed = discord.Embed(title=f"Meme Diário de {ctx.author.display_name}",
+                              description=meme['title'],
+                              color=discord.Color.gold())
         embed.set_image(url=meme['url'])
         embed.set_footer(text="Volte amanhã para outro meme exclusivo!")
         await ctx.send(embed=embed)
@@ -206,18 +165,15 @@ async def daily_meme(ctx):
 
 @bot.command(name='memeroulette')
 async def meme_roulette(ctx):
-    """Meme roulette - could be amazing or terrible!"""
     nsfw_allowed = isinstance(ctx.channel, discord.TextChannel) and ctx.channel.is_nsfw()
     meme = await fetch_random_meme(avoid_nsfw=not nsfw_allowed)
-
     if meme:
         if meme['nsfw'] and not nsfw_allowed:
-            await ctx.send("Quase peguei um meme NSFW! Tente novamente ou use um canal NSFW.")
+            await ctx.send("Quase peguei um meme NSFW! Use um canal NSFW.")
             return
-
         embed = discord.Embed(
             title="ROULETTE DE MEMES",
-            description="Você teve sorte..." if random.random() > 0.3 else "Eca! Meme ruim...",
+            description="Você teve sorte!" if random.random() > 0.3 else "Eca! Meme ruim...",
             color=discord.Color.red() if random.random() > 0.7 else discord.Color.green()
         )
         embed.set_image(url=meme['url'])
@@ -226,9 +182,9 @@ async def meme_roulette(ctx):
     else:
         await ctx.send("A roleta quebrou... tente novamente mais tarde!")
 
+# -------------------- COMANDOS DIVERSOS --------------------
 @bot.command()
 async def ship(ctx, user1: discord.Member, user2: discord.Member):
-    """Gera compatibilidade entre dois usuários"""
     porcentagem = random.randint(0, 100)
     embed = discord.Embed(
         title="💖 Ship do Dia 💖",
@@ -236,8 +192,7 @@ async def ship(ctx, user1: discord.Member, user2: discord.Member):
         color=0xff69b4
     )
     embed.set_thumbnail(url=user1.avatar.url)
-    coracao_url = "https://i.imgur.com/4M7IWwP.png"
-    embed.set_image(url=coracao_url)
+    embed.set_image(url="https://i.imgur.com/4M7IWwP.png")
     embed.set_footer(text=f"Shipper: {user2.display_name}", icon_url=user2.avatar.url)
     await ctx.send(embed=embed)
 
@@ -264,7 +219,6 @@ class FightButton(Button):
 
 @bot.command()
 async def fight(ctx, user1: discord.Member, user2: discord.Member):
-    """Luta interativa com botões entre dois usuários"""
     embed = discord.Embed(
         title="⚔️ Batalha ClownBoo ⚔️",
         description=f"{user1.display_name} VS {user2.display_name}\nClique nos botões para atacar!",
@@ -277,7 +231,6 @@ async def fight(ctx, user1: discord.Member, user2: discord.Member):
 
 @bot.command(name='trivia')
 async def trivia(ctx, perguntas: int = 3):
-    """Jogo de trivia em português usando a API Open Trivia DB"""
     pontuacao = 0
     async with aiohttp.ClientSession() as session:
         for i in range(perguntas):
@@ -285,7 +238,7 @@ async def trivia(ctx, perguntas: int = 3):
             async with session.get(url) as resp:
                 data = await resp.json()
                 if data["response_code"] != 0:
-                    await ctx.send("Não consegui buscar perguntas da API no momento...")
+                    await ctx.send("Não consegui buscar perguntas da API...")
                     return
                 q = data["results"][0]
                 pergunta = html.unescape(q["question"])
@@ -296,7 +249,6 @@ async def trivia(ctx, perguntas: int = 3):
                 await ctx.send(f"**Pergunta {i+1}/{perguntas}**\n{pergunta}\n{op_texto}\n(Responda com o número da opção)")
 
                 def check(m): return m.author == ctx.author and m.content.isdigit()
-
                 try:
                     msg = await bot.wait_for("message", check=check, timeout=20)
                     if opcoes[int(msg.content)-1] == resposta_correta:
@@ -304,13 +256,12 @@ async def trivia(ctx, perguntas: int = 3):
                         pontuacao += 1
                     else:
                         await ctx.send(f"❌ Errou! A resposta correta é: {resposta_correta}")
-                except:
+                except asyncio.TimeoutError:
                     await ctx.send(f"⏰ Tempo esgotado! A resposta correta é: {resposta_correta}")
-    await ctx.send(f"🏆 Você terminou! Pontuação final: {pontuacao}/{perguntas}")
+    await ctx.send(f"🏆 Pontuação final: {pontuacao}/{perguntas}")
 
 @bot.command(name='randomgif')
 async def random_gif(ctx, *, termo="meme"):
-    """Envia um GIF aleatório de meme"""
     url = f"https://g.tenor.com/v1/search?q={termo}&key=LIVDSRZULELA&limit=10"
     try:
         async with aiohttp.ClientSession() as session:
@@ -327,27 +278,22 @@ async def random_gif(ctx, *, termo="meme"):
 
 @bot.command(name='piada')
 async def piada(ctx):
-    """Envia uma piada aleatória em português"""
     url = "https://v2.jokeapi.dev/joke/Any?lang=pt&blacklistFlags=nsfw,racist,sexist"
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    if data["type"] == "single":
-                        await ctx.send(f"😂 {data['joke']}")
-                    else:
-                        await ctx.send(f"😂 {data['setup']}\n⏳ ...\n{data['delivery']}")
+                data = await resp.json()
+                if data["type"] == "single":
+                    await ctx.send(f"😂 {data['joke']}")
                 else:
-                    await ctx.send("Não consegui pegar uma piada agora, tente novamente mais tarde!")
+                    await ctx.send(f"😂 {data['setup']}\n⏳ ...\n{data['delivery']}")
     except Exception as e:
         print(f"Erro ao buscar piada: {e}")
         await ctx.send("Ocorreu um erro ao buscar a piada.")
 
-# -------------------- COMANDO PREFIXADO: CREDITOS --------------------
+# -------------------- CRÉDITOS --------------------
 @bot.command(name='creditos')
 async def creditos(ctx):
-    """Mostra os créditos do ClownBoo"""
     embed = discord.Embed(
         title="<:pd3:1407525193487749240> ClownBoo <:pd3:1407525193487749240>",
         description="O bot que traz memes, risadas e diversão para seu servidor!",
@@ -359,17 +305,10 @@ async def creditos(ctx):
     embed.set_footer(text="Feito com <:pd3:1407525193487749240> para a comunidade")
     await ctx.send(embed=embed)
 
-
-
-
-# -------------------- HELP COMMAND --------------------
+# -------------------- HELP --------------------
 @bot.command(name='help', aliases=['ajuda'])
 async def help_command(ctx):
-    embed = discord.Embed(
-        title="📜 Lista de Comandos da ClownBoo",
-        description="Aqui estão os comandos disponíveis:",
-        color=discord.Color.green()
-    )
+    embed = discord.Embed(title="📜 Comandos da ClownBoo", description="Lista de comandos disponíveis:", color=discord.Color.green())
     cmds = [
         ("&meme", "Mostra um meme aleatório imediatamente."),
         ("&memebomb <número>", "Envia vários memes de uma vez (máx 10)."),
@@ -380,10 +319,10 @@ async def help_command(ctx):
         ("&ship <usuário1> <usuário2>", "Mostra a compatibilidade entre dois usuários."),
         ("&trivia [quantidade]", "Jogo de perguntas e respostas em português (padrão 3)."),
         ("&fight <usuário1> <usuário2>", "Batalha com memes!!"),
-        ("&randomgif", "GIFs aleatórios de memes."),
+        ("&randomgif [termo]", "GIFs aleatórios de memes."),
         ("&piada", "O bot conta uma piada aleatória."),
-        ("&creditos", "Mostra os créditos do ClownBoo.")
-        ("&help", "Mostra um painel com os comandos.")
+        ("&creditos", "Mostra os créditos do ClownBoo."),
+        ("&help", "Mostra este painel de ajuda.")
     ]
     for nome, desc in cmds:
         embed.add_field(name=nome, value=desc, inline=False)
@@ -391,16 +330,12 @@ async def help_command(ctx):
     await ctx.send(embed=embed)
 
 # -------------------- RUN BOT --------------------
-
-async def main():
-    await bot.start(TOKEN)
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     if not TOKEN or TOKEN == 'YOUR_BOT_TOKEN_HERE':
         print("ERRO: Token do Discord não configurado!")
     else:
         try:
-            asyncio.run(main())
+            bot.run(TOKEN)
         except discord.errors.LoginFailure:
             print("Falha no login: Token inválido/incorreto")
         except Exception as e:
