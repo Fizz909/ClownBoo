@@ -187,16 +187,53 @@ async def meme_roulette(ctx):
 # -------------------- COMANDOS DIVERSOS --------------------
 @bot.command()
 async def ship(ctx, user1: discord.Member, user2: discord.Member):
+    """Gera uma porcentagem de compatibilidade e uma imagem shipando dois usuários"""
+
+    # Gerar porcentagem de compatibilidade
     porcentagem = random.randint(0, 100)
+
+    # Baixar avatares dos usuários
+    async with aiohttp.ClientSession() as session:
+        async with session.get(str(user1.avatar.url)) as resp1:
+            avatar1_bytes = await resp1.read()
+        async with session.get(str(user2.avatar.url)) as resp2:
+            avatar2_bytes = await resp2.read()
+
+    # Abrir imagens com Pillow
+    avatar1 = Image.open(io.BytesIO(avatar1_bytes)).convert("RGBA").resize((128, 128))
+    avatar2 = Image.open(io.BytesIO(avatar2_bytes)).convert("RGBA").resize((128, 128))
+
+    # Criar fundo
+    fundo = Image.new("RGBA", (300, 150), (255, 255, 255, 0))
+    fundo.paste(avatar1, (20, 10), avatar1)
+    fundo.paste(avatar2, (150, 10), avatar2)
+
+    # Desenhar coração e porcentagem
+    draw = ImageDraw.Draw(fundo)
+    try:
+        font = ImageFont.truetype("arial.ttf", 25)  # Arial padrão
+    except:
+        font = ImageFont.load_default()  # Fallback caso Arial não exista
+    draw.text((110, 60), f"💖 {porcentagem}%", fill="red", font=font)
+
+    # Salvar em buffer
+    buffer = io.BytesIO()
+    fundo.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    # Enviar embed com a imagem
     embed = discord.Embed(
         title="💖 Ship do Dia 💖",
         description=f"{user1.mention} + {user2.mention} = **{porcentagem}% compatíveis!**",
         color=0xff69b4
     )
+    file = discord.File(fp=buffer, filename="ship.png")
+    embed.set_image(url="attachment://ship.png")
     embed.set_thumbnail(url=user1.avatar.url)
-    embed.set_image(url="https://i.imgur.com/4M7IWwP.png")
     embed.set_footer(text=f"Shipper: {user2.display_name}", icon_url=user2.avatar.url)
+
     await ctx.send(embed=embed)
+
 
 class FightButton(Button):
     def __init__(self, label, user, opponent):
@@ -418,49 +455,6 @@ async def fact(ctx):
     except Exception as e:
         print(f"Erro fact: {e}")
         await ctx.send("❌ Ocorreu um erro ao buscar um fato.")
-
-@bot.command()
-async def ship(ctx, user1: discord.Member, user2: discord.Member):
-    """Gera uma imagem shipando dois usuários com porcentagem aleatória"""
-
-    # Gerar porcentagem de compatibilidade
-    porcentagem = random.randint(0, 100)
-
-    # Baixar avatares dos usuários
-    async with aiohttp.ClientSession() as session:
-        async with session.get(str(user1.avatar.url)) as resp1:
-            avatar1_bytes = await resp1.read()
-        async with session.get(str(user2.avatar.url)) as resp2:
-            avatar2_bytes = await resp2.read()
-
-    # Abrir imagens com Pillow
-    avatar1 = Image.open(io.BytesIO(avatar1_bytes)).convert("RGBA").resize((128, 128))
-    avatar2 = Image.open(io.BytesIO(avatar2_bytes)).convert("RGBA").resize((128, 128))
-
-    # Criar fundo
-    fundo = Image.new("RGBA", (300, 150), (255, 255, 255, 0))
-    fundo.paste(avatar1, (20, 10), avatar1)
-    fundo.paste(avatar2, (150, 10), avatar2)
-
-    # Desenhar coração e porcentagem
-    draw = ImageDraw.Draw(fundo)
-    font = ImageFont.truetype("arial.ttf", 25)  # Arial padrão, Railway deve ter
-    draw.text((110, 60), f"💖 {porcentagem}%", fill="red", font=font)
-
-    # Salvar em buffer
-    buffer = io.BytesIO()
-    fundo.save(buffer, format="PNG")
-    buffer.seek(0)
-
-    # Enviar embed com a imagem
-    embed = discord.Embed(
-        title=f"💖 Ship do Dia 💖",
-        description=f"{user1.mention} + {user2.mention} = **{porcentagem}% compatíveis!**",
-        color=0xff69b4
-    )
-    file = discord.File(fp=buffer, filename="ship.png")
-    embed.set_image(url="attachment://ship.png")
-    await ctx.send(embed=embed, file=file)
 
 # -------------------- CRÉDITOS --------------------
 @bot.command(name='creditos')
