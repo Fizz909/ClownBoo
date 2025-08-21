@@ -26,17 +26,15 @@ bot = commands.Bot(command_prefix='&', intents=intents, help_command=None)
 TOKEN = os.getenv('DISCORD_TOKEN') or 'YOUR_BOT_TOKEN_HERE'
 MEME_CHANNEL_ID = None
 INTERVAL_MINUTES = 60
-SUBREDDITS = ['memes','wholesomememes','ProgrammerHumor', 'MemesBrasil', 'Brasil', 'porramauricio', 'suddenlycaralho', 'MemesBR',
-    'circojeca', 'tiodopave', 'futebol', 'narutomemesbr',]
+SUBREDDITS = [
+    'memes','wholesomememes','ProgrammerHumor','MemesBrasil','Brasil',
+    'porramauricio','suddenlycaralho','MemesBR','circojeca','tiodopave',
+    'futebol','narutomemesbr'
+]
 MEME_HISTORY = []
 COOLDOWNS = {}
 
-bot = commands.Bot(
-    command_prefix='&',
-    intents=intents,
-    help_command=None
-)
-
+# -------------------- FUNÇÕES --------------------
 async def fetch_random_meme(avoid_nsfw=True):
     """Fetch random meme from API with NSFW filter"""
     subreddit = random.choice(SUBREDDITS)
@@ -69,6 +67,7 @@ async def fetch_random_meme(avoid_nsfw=True):
         print(f"Error fetching meme: {e}")
     return None
 
+# -------------------- TASK DE MEMES --------------------
 @tasks.loop(minutes=INTERVAL_MINUTES)
 async def send_meme():
     if MEME_CHANNEL_ID is None:
@@ -93,6 +92,7 @@ async def send_meme():
         else:
             await channel.send("Não consegui encontrar um meme no momento...")
 
+# -------------------- EVENTOS --------------------
 @bot.event
 async def on_ready():
     print(f"Bot logado como {bot.user}")
@@ -105,6 +105,7 @@ async def on_ready():
     await bot.change_presence(activity=activity)
     print("Status atualizado!")
 
+# -------------------- COMANDOS PREFIXADOS --------------------
 @bot.command(name='setmemechannel', aliases=['smc'])
 @commands.has_permissions(manage_channels=True)
 async def set_meme_channel(ctx, channel: discord.TextChannel):
@@ -226,85 +227,18 @@ async def meme_roulette(ctx):
 
 @bot.command()
 async def ship(ctx, user1: discord.Member, user2: discord.Member):
-    # Gera a porcentagem de compatibilidade
+    """Gera compatibilidade entre dois usuários"""
     porcentagem = random.randint(0, 100)
-
-    # Embed principal
     embed = discord.Embed(
         title="💖 Ship do Dia 💖",
         description=f"{user1.mention} + {user2.mention} = **{porcentagem}% compatíveis!**",
         color=0xff69b4
     )
-
-    # Avatares dos usuários
     embed.set_thumbnail(url=user1.avatar.url)
-    
-    # Imagem do coração central (pode ser qualquer GIF ou PNG online)
     coracao_url = "https://i.imgur.com/4M7IWwP.png"
     embed.set_image(url=coracao_url)
-
-    # Texto final com o segundo usuário (opcional)
     embed.set_footer(text=f"Shipper: {user2.display_name}", icon_url=user2.avatar.url)
-
     await ctx.send(embed=embed)
-
-@bot.command()
-async def trivia(ctx, perguntas: int = 3):
-    """
-    Jogo de trivia em português usando a API Open Trivia DB.
-    Use &trivia <número_de_perguntas> para jogar.
-    """
-    pontuacao = 0
-
-    async with aiohttp.ClientSession() as session:
-        for i in range(perguntas):
-            url = "https://opentdb.com/api.php?amount=1&type=multiple&category=9&lang=pt"
-            async with session.get(url) as resp:
-                data = await resp.json()
-                if data["response_code"] != 0:
-                    await ctx.send("Não consegui buscar perguntas da API no momento...")
-                    return
-
-                q = data["results"][0]
-                pergunta = html.unescape(q["question"])
-                opcoes = [html.unescape(ans) for ans in q["incorrect_answers"]] + [html.unescape(q["correct_answer"])]
-                random.shuffle(opcoes)
-                resposta_correta = html.unescape(q["correct_answer"])
-
-                op_texto = "\n".join([f"{idx+1}. {opt}" for idx, opt in enumerate(opcoes)])
-                await ctx.send(f"**Pergunta {i+1}/{perguntas}**\n{pergunta}\n{op_texto}\n(Responda com o número da opção)")
-
-                def check(m):
-                    return m.author == ctx.author and m.content.isdigit()
-
-                try:
-                    msg = await bot.wait_for("message", check=check, timeout=20)
-                    if opcoes[int(msg.content)-1] == resposta_correta:
-                        await ctx.send("✅ Acertou!")
-                        pontuacao += 1
-                    else:
-                        await ctx.send(f"❌ Errou! A resposta correta é: {resposta_correta}")
-                except:
-                    await ctx.send(f"⏰ Tempo esgotado! A resposta correta é: {resposta_correta}")
-
-    await ctx.send(f"🏆 Você terminou! Pontuação final: {pontuacao}/{perguntas}")
-
-@bot.command(name='randomgif')
-async def random_gif(ctx, *, termo="meme"):
-    """Envia um GIF aleatório de meme"""
-    url = f"https://g.tenor.com/v1/search?q={termo}&key=LIVDSRZULELA&limit=10"  # Key pública de teste
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    gif = random.choice(data['results'])
-                    await ctx.send(gif['media'][0]['gif']['url'])
-                else:
-                    await ctx.send("❌ Não consegui pegar um GIF agora...")
-    except Exception as e:
-        print(e)
-        await ctx.send("❌ Ocorreu um erro ao tentar buscar o GIF.")
 
 class FightButton(Button):
     def __init__(self, label, user, opponent):
@@ -322,7 +256,6 @@ class FightButton(Button):
             "não acredita no que aconteceu!",
             "recebeu um ataque secreto!"
         ]
-        
         result = f"{self.user.display_name} {random.choice(frases)} {random.choice(ataques)} (-{self.dano} HP para {self.opponent.display_name})"
         await interaction.response.send_message(result, ephemeral=False)
         self.disabled = True
@@ -331,36 +264,78 @@ class FightButton(Button):
 @bot.command()
 async def fight(ctx, user1: discord.Member, user2: discord.Member):
     """Luta interativa com botões entre dois usuários"""
-    
     embed = discord.Embed(
         title="⚔️ Batalha ClownBoo ⚔️",
         description=f"{user1.display_name} VS {user2.display_name}\nClique nos botões para atacar!",
         color=discord.Color.random()
     )
-
-    view = View(timeout=30)  # Tempo para clicar nos botões
-
-    # Adiciona 2 botões de ataque (um para cada usuário)
+    view = View(timeout=30)
     view.add_item(FightButton(label="Atacar!", user=user1, opponent=user2))
     view.add_item(FightButton(label="Atacar!", user=user2, opponent=user1))
-
     await ctx.send(embed=embed, view=view)
+
+@bot.command(name='trivia')
+async def trivia(ctx, perguntas: int = 3):
+    """Jogo de trivia em português usando a API Open Trivia DB"""
+    pontuacao = 0
+    async with aiohttp.ClientSession() as session:
+        for i in range(perguntas):
+            url = "https://opentdb.com/api.php?amount=1&type=multiple&category=9&lang=pt"
+            async with session.get(url) as resp:
+                data = await resp.json()
+                if data["response_code"] != 0:
+                    await ctx.send("Não consegui buscar perguntas da API no momento...")
+                    return
+                q = data["results"][0]
+                pergunta = html.unescape(q["question"])
+                opcoes = [html.unescape(ans) for ans in q["incorrect_answers"]] + [html.unescape(q["correct_answer"])]
+                random.shuffle(opcoes)
+                resposta_correta = html.unescape(q["correct_answer"])
+                op_texto = "\n".join([f"{idx+1}. {opt}" for idx, opt in enumerate(opcoes)])
+                await ctx.send(f"**Pergunta {i+1}/{perguntas}**\n{pergunta}\n{op_texto}\n(Responda com o número da opção)")
+
+                def check(m): return m.author == ctx.author and m.content.isdigit()
+
+                try:
+                    msg = await bot.wait_for("message", check=check, timeout=20)
+                    if opcoes[int(msg.content)-1] == resposta_correta:
+                        await ctx.send("✅ Acertou!")
+                        pontuacao += 1
+                    else:
+                        await ctx.send(f"❌ Errou! A resposta correta é: {resposta_correta}")
+                except:
+                    await ctx.send(f"⏰ Tempo esgotado! A resposta correta é: {resposta_correta}")
+    await ctx.send(f"🏆 Você terminou! Pontuação final: {pontuacao}/{perguntas}")
+
+@bot.command(name='randomgif')
+async def random_gif(ctx, *, termo="meme"):
+    """Envia um GIF aleatório de meme"""
+    url = f"https://g.tenor.com/v1/search?q={termo}&key=LIVDSRZULELA&limit=10"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    gif = random.choice(data['results'])
+                    await ctx.send(gif['media'][0]['gif']['url'])
+                else:
+                    await ctx.send("❌ Não consegui pegar um GIF agora...")
+    except Exception as e:
+        print(e)
+        await ctx.send("❌ Ocorreu um erro ao tentar buscar o GIF.")
 
 @bot.command(name='piada')
 async def piada(ctx):
     """Envia uma piada aleatória em português"""
     url = "https://v2.jokeapi.dev/joke/Any?lang=pt&blacklistFlags=nsfw,racist,sexist"
-    
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     if data["type"] == "single":
-                        # Piada de uma linha
                         await ctx.send(f"😂 {data['joke']}")
                     else:
-                        # Piada em duas partes (setup + delivery)
                         await ctx.send(f"😂 {data['setup']}\n⏳ ...\n{data['delivery']}")
                 else:
                     await ctx.send("Não consegui pegar uma piada agora, tente novamente mais tarde!")
@@ -368,6 +343,7 @@ async def piada(ctx):
         print(f"Erro ao buscar piada: {e}")
         await ctx.send("Ocorreu um erro ao buscar a piada.")
 
+# -------------------- SLASH COMMAND: CREDITOS --------------------
 class Creditos(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -378,20 +354,20 @@ class Creditos(commands.Cog):
     )
     async def creditos(self, interaction: discord.Interaction):
         embed = discord.Embed(
-            title="<:pd3:1407525193487749240> ClownBoo",
+            title="🎭 ClownBoo",
             description="O bot que traz memes, risadas e diversão para seu servidor!",
             color=discord.Color.purple()
         )
-        embed.add_field(name="<a:pd2:1407524312923246632> Criador", value="[Fizz404](https://fizzboo.netlify.app/)", inline=False)
-        embed.add_field(name="<:git:1407889670464864418> GitHub", value="[Fizz909](https://github.com/Fizz909)", inline=False)
+        embed.add_field(name="👨‍💻 Criador", value="[Fizz404](https://fizzboo.netlify.app/)", inline=False)
+        embed.add_field(name="💻 GitHub", value="[Fizz909](https://github.com/Fizz909)", inline=False)
         embed.add_field(name="💬 Suporte", value="[Servidor Discord](https://clownboo.netlify.app/)", inline=False)
-        embed.set_footer(text="Feito com <:pd3:1407525193487749240> para a comunidade")
-
+        embed.set_footer(text="Feito com ❤ para a comunidade")
         await interaction.response.send_message(embed=embed, ephemeral=False)
 
 async def setup(bot):
     await bot.add_cog(Creditos(bot))
 
+# -------------------- HELP COMMAND --------------------
 @bot.command(name='help', aliases=['ajuda'])
 async def help_command(ctx):
     embed = discord.Embed(
@@ -399,25 +375,24 @@ async def help_command(ctx):
         description="Aqui estão os comandos disponíveis:",
         color=discord.Color.green()
     )
-
-    embed.add_field(name="&meme", value="Mostra um meme aleatório imediatamente.", inline=False)
-    embed.add_field(name="&memebomb <número>", value="Envia vários memes de uma vez (máx 10).", inline=False)
-    embed.add_field(name="&dailymeme", value="Receba seu meme diário exclusivo.", inline=False)
-    embed.add_field(name="&memeroulette", value="Roleta de memes: sorte ou azar!", inline=False)
-    embed.add_field(name="&setmemechannel <canal>", value="Define o canal de memes e ativa auto-postagem.", inline=False)
-    embed.add_field(name="&memestatus", value="Mostra o status atual do bot e do canal de memes.", inline=False)
-    embed.add_field(name="&ship <usuário1> <usuário2>", value="Mostra a compatibilidade entre dois usuários.", inline=False)
-    embed.add_field(name="&trivia [quantidade]", value="Jogo de perguntas e respostas em português (padrão 3).", inline=False)
-    embed.add_field(name="&fight <usuário1> <usuário2>", value="Batalha com memes!!.", inline=False)
-    embed.add_field(name="&randomgif", value="GIFs aleatórios de memes.", inline=False)
-    embed.add_field(name="&piada", value="O bot conta uma piada aleatória.", inline=False)
-    embed.add_field(name="&help", value="Mostra um painel com os comandos.", inline=False)
-
-
-
+    cmds = [
+        ("&meme", "Mostra um meme aleatório imediatamente."),
+        ("&memebomb <número>", "Envia vários memes de uma vez (máx 10)."),
+        ("&dailymeme", "Receba seu meme diário exclusivo."),
+        ("&memeroulette", "Roleta de memes: sorte ou azar!"),
+        ("&setmemechannel <canal>", "Define o canal de memes e ativa auto-postagem."),
+        ("&memestatus", "Mostra o status atual do bot e do canal de memes."),
+        ("&ship <usuário1> <usuário2>", "Mostra a compatibilidade entre dois usuários."),
+        ("&trivia [quantidade]", "Jogo de perguntas e respostas em português (padrão 3)."),
+        ("&fight <usuário1> <usuário2>", "Batalha com memes!!"),
+        ("&randomgif", "GIFs aleatórios de memes."),
+        ("&piada", "O bot conta uma piada aleatória."),
+        ("&help", "Mostra um painel com os comandos.")
+    ]
+    for nome, desc in cmds:
+        embed.add_field(name=nome, value=desc, inline=False)
     embed.set_footer(text="ClownBoo 🤡 | Divirta-se com os memes!")
     await ctx.send(embed=embed)
-
 
 # -------------------- RUN BOT --------------------
 if __name__ == '__main__':
