@@ -367,6 +367,30 @@ async def piada(ctx):
         print(f"Erro ao buscar piada: {e}")
         await ctx.send("Ocorreu um erro ao buscar a piada.")
 
+class Creditos(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @app_commands.command(
+        name="creditos",
+        description="Mostra os créditos do ClownBoo"
+    )
+    async def creditos(self, interaction: discord.Interaction):
+        embed = discord.Embed(
+            title="<:pd3:1407525193487749240> ClownBoo",
+            description="O bot que traz memes, risadas e diversão para seu servidor!",
+            color=discord.Color.purple()
+        )
+        embed.add_field(name="<a:pd2:1407524312923246632> Criador", value="[Fizz404](https://fizzboo.netlify.app/)", inline=False)
+        embed.add_field(name="<:git:1407889670464864418> GitHub", value="[Fizz909](https://github.com/Fizz909)", inline=False)
+        embed.add_field(name="💬 Suporte", value="[Servidor Discord](https://clownboo.netlify.app/)", inline=False)
+        embed.set_footer(text="Feito com <:pd3:1407525193487749240> para a comunidade")
+
+        await interaction.response.send_message(embed=embed, ephemeral=False)
+
+async def setup(bot):
+    await bot.add_cog(Creditos(bot))
+
 @bot.command(name='help', aliases=['ajuda'])
 async def help_command(ctx):
     embed = discord.Embed(
