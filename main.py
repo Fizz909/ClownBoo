@@ -9,6 +9,8 @@ from discord.ui import View, Button
 from dotenv import load_dotenv
 import html  # Para decodificar entidades HTML
 from keep_alive import keep_alive
+from PIL import Image, ImageDraw, ImageFont
+import io
 
 # -------------------- KEEP ALIVE --------------------
 keep_alive()
@@ -294,8 +296,7 @@ async def piada(ctx):
 # -------------------- HUG --------------------
 @bot.command()
 async def hug(ctx, user: discord.Member = None):
-    """Envia um abraço virtual para outro usuário usando Tenor público"""
-    if user is None:
+    if not user:
         await ctx.send("Você precisa mencionar alguém para abraçar! 🤗")
         return
 
@@ -315,13 +316,12 @@ async def hug(ctx, user: discord.Member = None):
         await ctx.send(embed=embed)
     except Exception as e:
         print(f"Erro hug: {e}")
-        await ctx.send("❌ Não consegui buscar um GIF de abraço agora.")
+        await ctx.send("❌ Não consegui pegar um GIF de abraço agora.")
 
 # -------------------- SLAP --------------------
 @bot.command()
 async def slap(ctx, user: discord.Member = None):
-    """Dá um tapa engraçado em outro usuário usando Tenor público"""
-    if user is None:
+    if not user:
         await ctx.send("Você precisa mencionar alguém para dar um tapa! 🖐️")
         return
 
@@ -341,13 +341,11 @@ async def slap(ctx, user: discord.Member = None):
         await ctx.send(embed=embed)
     except Exception as e:
         print(f"Erro slap: {e}")
-        await ctx.send("❌ Não consegui buscar um GIF de tapa agora.")
-
+        await ctx.send("❌ Não consegui pegar um GIF de tapa agora.")
 # -------------------- KISS --------------------
 @bot.command()
 async def kiss(ctx, user: discord.Member = None):
-    """Envia um beijo virtual para outro usuário usando Tenor público"""
-    if user is None:
+    if not user:
         await ctx.send("Você precisa mencionar alguém para beijar! 😘")
         return
 
@@ -367,8 +365,7 @@ async def kiss(ctx, user: discord.Member = None):
         await ctx.send(embed=embed)
     except Exception as e:
         print(f"Erro kiss: {e}")
-        await ctx.send("❌ Não consegui buscar um GIF de beijo agora.")
-
+        await ctx.send("❌ Não consegui pegar um GIF de beijo agora.")
 # -------------------- WEATHER --------------------
 @bot.command()
 async def weather(ctx, *, city: str):
@@ -421,6 +418,49 @@ async def fact(ctx):
     except Exception as e:
         print(f"Erro fact: {e}")
         await ctx.send("❌ Ocorreu um erro ao buscar um fato.")
+
+@bot.command()
+async def ship(ctx, user1: discord.Member, user2: discord.Member):
+    """Gera uma imagem shipando dois usuários com porcentagem aleatória"""
+
+    # Gerar porcentagem de compatibilidade
+    porcentagem = random.randint(0, 100)
+
+    # Baixar avatares dos usuários
+    async with aiohttp.ClientSession() as session:
+        async with session.get(str(user1.avatar.url)) as resp1:
+            avatar1_bytes = await resp1.read()
+        async with session.get(str(user2.avatar.url)) as resp2:
+            avatar2_bytes = await resp2.read()
+
+    # Abrir imagens com Pillow
+    avatar1 = Image.open(io.BytesIO(avatar1_bytes)).convert("RGBA").resize((128, 128))
+    avatar2 = Image.open(io.BytesIO(avatar2_bytes)).convert("RGBA").resize((128, 128))
+
+    # Criar fundo
+    fundo = Image.new("RGBA", (300, 150), (255, 255, 255, 0))
+    fundo.paste(avatar1, (20, 10), avatar1)
+    fundo.paste(avatar2, (150, 10), avatar2)
+
+    # Desenhar coração e porcentagem
+    draw = ImageDraw.Draw(fundo)
+    font = ImageFont.truetype("arial.ttf", 25)  # Arial padrão, Railway deve ter
+    draw.text((110, 60), f"💖 {porcentagem}%", fill="red", font=font)
+
+    # Salvar em buffer
+    buffer = io.BytesIO()
+    fundo.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    # Enviar embed com a imagem
+    embed = discord.Embed(
+        title=f"💖 Ship do Dia 💖",
+        description=f"{user1.mention} + {user2.mention} = **{porcentagem}% compatíveis!**",
+        color=0xff69b4
+    )
+    file = discord.File(fp=buffer, filename="ship.png")
+    embed.set_image(url="attachment://ship.png")
+    await ctx.send(embed=embed, file=file)
 
 # -------------------- CRÉDITOS --------------------
 @bot.command(name='creditos')
