@@ -325,7 +325,7 @@ async def piada(ctx):
                 if data["type"] == "single":
                     await ctx.send(f"😂 {data['joke']}")
                 else:
-                    await ctx.send(f"😂 {data['setup']}\n⏳ ...\n{data['delivery']}")
+                    await ctx.send(f"😂 {data['setup']}\n⏱️ ...\n{data['delivery']}")
     except Exception as e:
         print(f"Erro ao buscar piada: {e}")
         await ctx.send("Ocorreu um erro ao buscar a piada.")
@@ -394,7 +394,7 @@ async def creditos(ctx):
     embed.add_field(name="<a:pd2:1407524312923246632> Criador", value="[Fizz404](https://fizzboo.netlify.app/)", inline=False)
     embed.add_field(name="<:git:1407889670464864418> GitHub", value="[Fizz909](https://github.com/Fizz909)", inline=False)
     embed.add_field(name="💬 Suporte", value="[Servidor Discord](https://clownboo.netlify.app/)", inline=False)
-    embed.set_footer(text="Feito com <:pd3:1407525193487749240> para a comunidade")
+    embed.set_footer(text="Feito com 🤡 para a comunidade")
     await ctx.send(embed=embed)
 
 # -------------------- HELP --------------------
