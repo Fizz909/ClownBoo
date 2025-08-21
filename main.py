@@ -451,6 +451,10 @@ async def help_command(ctx):
         ("&trivia [quantidade]", "Jogo de perguntas e respostas em português (padrão 3)."),
         ("&randomgif [termo]", "GIFs aleatórios de memes."),
         ("&piada", "O bot conta uma piada aleatória."),
+        ("&&hug <usuário>", "Abraça outro usuário ou o bot se quiser."),
+        ("&slap <usuário>", "Bate em outro usuário."),
+        ("&weather <cidade>", "Mostra o clima em alguma cidade."),
+        ("&fact", "Mostra um fato aleatório."),
         ("&creditos", "Mostra os créditos do ClownBoo."),
         ("&help", "Mostra este painel de ajuda.")
     ]
