@@ -96,6 +96,14 @@ async def send_meme():
 @bot.event
 async def on_ready():
     print(f"Bot logado como {bot.user}")
+
+    # Sincronizar slash commands
+    try:
+        await bot.tree.sync()
+        print("Slash commands sincronizados!")
+    except Exception as e:
+        print(f"Erro ao sincronizar slash commands: {e}")
+
     # Status mostrando em quantos servidores o bot está
     guild_count = len(bot.guilds)
     activity = discord.Activity(
@@ -364,8 +372,6 @@ class Creditos(commands.Cog):
         embed.set_footer(text="Feito com ❤ para a comunidade")
         await interaction.response.send_message(embed=embed, ephemeral=False)
 
-async def setup(bot):
-    await bot.add_cog(Creditos(bot))
 
 # -------------------- HELP COMMAND --------------------
 @bot.command(name='help', aliases=['ajuda'])
@@ -395,6 +401,9 @@ async def help_command(ctx):
     await ctx.send(embed=embed)
 
 # -------------------- RUN BOT --------------------
+
+bot.add_cog(Creditos(bot))
+
 if __name__ == '__main__':
     if not TOKEN or TOKEN == 'YOUR_BOT_TOKEN_HERE':
         print("ERRO: Token do Discord não configurado!")
