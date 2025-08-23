@@ -14,8 +14,6 @@ import html  # Para decodificar entidades HTML
 from PIL import Image, ImageDraw, ImageFont
 import io
 
-
-
 # -------------------- CONFIG --------------------
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN') or 'YOUR_BOT_TOKEN_HERE'
@@ -95,98 +93,115 @@ async def on_ready():
     try:
         synced = await bot.tree.sync()
         print(f"Comandos slash sincronizados: {len(synced)} comandos")
+        for cmd in synced:
+            print(f" - {cmd.name}")
     except Exception as e:
         print(f"Erro ao sincronizar comandos slash: {e}")
     
     print("Status atualizado!")
 
 # -------------------- COMANDOS DE MEMES --------------------
-@bot.hybrid_command(name='setmemechannel', aliases=['smc'], description="Define o canal para envio automático de memes")
-@commands.has_permissions(manage_channels=True)
-async def set_meme_channel(ctx, channel: discord.TextChannel):
+@bot.tree.command(name="setmemechannel", description="Define o canal para envio automático de memes")
+@app_commands.describe(channel="Canal onde os memes serão enviados")
+@app_commands.checks.has_permissions(manage_channels=True)
+async def set_meme_channel(interaction: discord.Interaction, channel: discord.TextChannel):
     global MEME_CHANNEL_ID
-    perms = channel.permissions_for(ctx.guild.me)
+    perms = channel.permissions_for(interaction.guild.me)
     if not (perms.send_messages and perms.embed_links):
-        await ctx.send("Preciso de permissões para enviar mensagens e embeds neste canal!")
+        await interaction.response.send_message("Preciso de permissões para enviar mensagens e embeds neste canal!", ephemeral=True)
         return
+    
     MEME_CHANNEL_ID = channel.id
-    await ctx.send(f"Canal de memes definido para {channel.mention}")
+    await interaction.response.send_message(f"Canal de memes definido para {channel.mention}")
+    
     if not send_meme.is_running():
         send_meme.start()
-        await ctx.send("Auto-postagem de memes iniciada!")
+        await interaction.followup.send("Auto-postagem de memes iniciada!")
 
-@bot.hybrid_command(name='meme', description="Envia um meme aleatório")
-async def test_meme(ctx):
-    await ctx.defer()  # Para comandos slash que podem demorar
+@bot.tree.command(name="meme", description="Envia um meme aleatório")
+async def meme_slash(interaction: discord.Interaction):
+    await interaction.response.defer()
+    
     meme = await fetch_random_meme()
     if meme:
         embed = discord.Embed(title=meme['title'], color=discord.Color.random())
         embed.set_image(url=meme['url'])
         embed.set_footer(text=f"r/{meme['subreddit']} | Post original")
-        await ctx.send(embed=embed)
+        await interaction.followup.send(embed=embed)
     else:
-        await ctx.send("Não consegui encontrar um meme.")
+        await interaction.followup.send("Não consegui encontrar um meme.")
 
-@bot.hybrid_command(name='memestatus', description="Mostra o status atual do bot de memes")
-async def meme_status(ctx):
+@bot.tree.command(name="memestatus", description="Mostra o status atual do bot de memes")
+async def meme_status_slash(interaction: discord.Interaction):
     channel = bot.get_channel(MEME_CHANNEL_ID) if MEME_CHANNEL_ID else None
     embed = discord.Embed(title="Status da ClownBoo", color=discord.Color.blue())
     embed.add_field(name="Canal de Memes", value=channel.mention if channel else "Não definido", inline=False)
     embed.add_field(name="Status", value="ATIVO" if send_meme.is_running() else "PAUSADO", inline=False)
     embed.add_field(name="Intervalo", value=f"A cada {INTERVAL_MINUTES} minutos", inline=False)
     embed.add_field(name="Subreddits", value=", ".join(f"r/{sub}" for sub in SUBREDDITS), inline=False)
+    
     if send_meme.is_running():
         next_run = send_meme.next_iteration
         embed.add_field(name="Próximo Post", value=f"<t:{int(next_run.timestamp())}:R>", inline=False)
-    await ctx.send(embed=embed)
+    
+    await interaction.response.send_message(embed=embed)
 
-@bot.hybrid_command(name='memebomb', description="Envia vários memes de uma vez (máx 10)")
-@commands.has_permissions(manage_channels=True)
-async def meme_bomb(ctx, amount: int = 5):
+@bot.tree.command(name="memebomb", description="Envia vários memes de uma vez (máx 10)")
+@app_commands.describe(amount="Quantidade de memes para enviar")
+@app_commands.checks.has_permissions(manage_channels=True)
+async def meme_bomb_slash(interaction: discord.Interaction, amount: int = 5):
     if amount > 10:
         amount = 10
-    await ctx.send(f"Enviando {amount} memes de uma vez!")
+    
+    await interaction.response.send_message(f"Enviando {amount} memes de uma vez!")
+    
     for i in range(amount):
         meme = await fetch_random_meme()
         if meme:
             embed = discord.Embed(title=meme['title'], color=discord.Color.random())
             embed.set_image(url=meme['url'])
             embed.set_footer(text=f"Meme {i+1}/{amount} | r/{meme['subreddit']}")
-            await ctx.send(embed=embed)
+            await interaction.channel.send(embed=embed)
             await asyncio.sleep(1)
 
-@bot.hybrid_command(name='dailymeme', description="Receba seu meme diário exclusivo")
-async def daily_meme(ctx):
-    user_id = ctx.author.id
+@bot.tree.command(name="dailymeme", description="Receba seu meme diário exclusivo")
+async def daily_meme_slash(interaction: discord.Interaction):
+    user_id = interaction.user.id
     last_daily = COOLDOWNS.get(f'daily_{user_id}')
+    
     if last_daily and (datetime.now() - last_daily) < timedelta(hours=24):
         next_daily = last_daily + timedelta(hours=24)
-        await ctx.send(f"Seu próximo meme diário estará disponível <t:{int(next_daily.timestamp())}:R>!")
+        await interaction.response.send_message(f"Seu próximo meme diário estará disponível <t:{int(next_daily.timestamp())}:R>!", ephemeral=True)
         return
     
-    await ctx.defer()  # Para comandos slash que podem demorar
+    await interaction.response.defer()
+    
     meme = await fetch_random_meme()
     if meme:
         COOLDOWNS[f'daily_{user_id}'] = datetime.now()
-        embed = discord.Embed(title=f"Meme Diário de {ctx.author.display_name}",
-                              description=meme['title'],
-                              color=discord.Color.gold())
+        embed = discord.Embed(
+            title=f"Meme Diário de {interaction.user.display_name}",
+            description=meme['title'],
+            color=discord.Color.gold()
+        )
         embed.set_image(url=meme['url'])
         embed.set_footer(text="Volte amanhã para outro meme exclusivo!")
-        await ctx.send(embed=embed)
+        await interaction.followup.send(embed=embed)
     else:
-        await ctx.send("Não consegui encontrar seu meme diário...")
+        await interaction.followup.send("Não consegui encontrar seu meme diário...")
 
-@bot.hybrid_command(name='memeroulette', description="Roleta de memes: sorte ou azar!")
-async def meme_roulette(ctx):
-    nsfw_allowed = isinstance(ctx.channel, discord.TextChannel) and ctx.channel.is_nsfw()
+@bot.tree.command(name="memeroulette", description="Roleta de memes: sorte ou azar!")
+async def meme_roulette_slash(interaction: discord.Interaction):
+    nsfw_allowed = isinstance(interaction.channel, discord.TextChannel) and interaction.channel.is_nsfw()
     
-    await ctx.defer()  # Para comandos slash que podem demorar
+    await interaction.response.defer()
+    
     meme = await fetch_random_meme(avoid_nsfw=not nsfw_allowed)
     if meme:
         if meme['nsfw'] and not nsfw_allowed:
-            await ctx.send("Quase peguei um meme NSFW! Use um canal NSFW.")
+            await interaction.followup.send("Quase peguei um meme NSFW! Use um canal NSFW.")
             return
+        
         embed = discord.Embed(
             title="ROULETTE DE MEMES",
             description="Você teve sorte!" if random.random() > 0.3 else "Eca! Meme ruim...",
@@ -194,15 +209,15 @@ async def meme_roulette(ctx):
         )
         embed.set_image(url=meme['url'])
         embed.set_footer(text="A roleta parou em...")
-        await ctx.send(embed=embed)
+        await interaction.followup.send(embed=embed)
     else:
-        await ctx.send("A roleta quebrou... tente novamente mais tarde!")
+        await interaction.followup.send("A roleta quebrou... tente novamente mais tarde!")
 
 # -------------------- COMANDOS DIVERSOS --------------------
-@bot.hybrid_command(name='ship', description="Mostra a compatibilidade entre dois usuários")
-async def ship(ctx, user1: discord.Member, user2: discord.Member):
-    """Gera uma porcentagem de compatibilidade e uma imagem shipando dois usuários"""
-    await ctx.defer()  # Para comandos slash que podem demorar
+@bot.tree.command(name="ship", description="Mostra a compatibilidade entre dois usuários")
+@app_commands.describe(user1="Primeiro usuário", user2="Segundo usuário")
+async def ship_slash(interaction: discord.Interaction, user1: discord.Member, user2: discord.Member):
+    await interaction.response.defer()
 
     # Gerar porcentagem de compatibilidade
     porcentagem = random.randint(0, 100)
@@ -226,9 +241,9 @@ async def ship(ctx, user1: discord.Member, user2: discord.Member):
     # Desenhar coração e porcentagem
     draw = ImageDraw.Draw(fundo)
     try:
-        font = ImageFont.truetype("arial.ttf", 25)  # Arial padrão
+        font = ImageFont.truetype("arial.ttf", 25)
     except:
-        font = ImageFont.load_default()  # Fallback caso Arial não exista
+        font = ImageFont.load_default()
     draw.text((110, 60), f"💖 {porcentagem}%", fill="red", font=font)
 
     # Salvar em buffer
@@ -247,7 +262,7 @@ async def ship(ctx, user1: discord.Member, user2: discord.Member):
     embed.set_thumbnail(url=user1.display_avatar.url)
     embed.set_footer(text=f"Shipper: {user2.display_name}", icon_url=user2.display_avatar.url)
 
-    await ctx.send(file=file, embed=embed)
+    await interaction.followup.send(file=file, embed=embed)
 
 class FightButton(Button):
     def __init__(self, label, user, opponent):
@@ -270,8 +285,9 @@ class FightButton(Button):
         self.disabled = True
         await interaction.message.edit(view=self.view)
 
-@bot.hybrid_command(name='fight', description="Inicia uma batalha entre dois usuários")
-async def fight(ctx, user1: discord.Member, user2: discord.Member):
+@bot.tree.command(name="fight", description="Inicia uma batalha entre dois usuários")
+@app_commands.describe(user1="Primeiro usuário", user2="Segundo usuário")
+async def fight_slash(interaction: discord.Interaction, user1: discord.Member, user2: discord.Member):
     embed = discord.Embed(
         title="⚔️ Batalha ClownBoo ⚔️",
         description=f"{user1.display_name} VS {user2.display_name}\nClique nos botões para atacar!",
@@ -280,14 +296,16 @@ async def fight(ctx, user1: discord.Member, user2: discord.Member):
     view = View(timeout=30)
     view.add_item(FightButton(label="Atacar!", user=user1, opponent=user2))
     view.add_item(FightButton(label="Atacar!", user=user2, opponent=user1))
-    await ctx.send(embed=embed, view=view)
+    await interaction.response.send_message(embed=embed, view=view)
 
-@bot.hybrid_command(name='trivia', description="Jogo de perguntas e respostas em português")
+@bot.tree.command(name="trivia", description="Jogo de perguntas e respostas em português")
 @app_commands.describe(perguntas="Número de perguntas (padrão: 3)")
-async def trivia(ctx, perguntas: int = 3):
+async def trivia_slash(interaction: discord.Interaction, perguntas: int = 3):
     if perguntas > 10:
         perguntas = 10
-        await ctx.send("Máximo de 10 perguntas definido.")
+        await interaction.response.send_message("Máximo de 10 perguntas definido.")
+    
+    await interaction.response.send_message(f"Iniciando trivia com {perguntas} perguntas!")
     
     pontuacao = 0
     async with aiohttp.ClientSession() as session:
@@ -296,7 +314,7 @@ async def trivia(ctx, perguntas: int = 3):
             async with session.get(url) as resp:
                 data = await resp.json()
                 if data["response_code"] != 0:
-                    await ctx.send("Não consegui buscar perguntas da API...")
+                    await interaction.channel.send("Não consegui buscar perguntas da API...")
                     return
                 q = data["results"][0]
                 pergunta = html.unescape(q["question"])
@@ -304,23 +322,24 @@ async def trivia(ctx, perguntas: int = 3):
                 random.shuffle(opcoes)
                 resposta_correta = html.unescape(q["correct_answer"])
                 op_texto = "\n".join([f"{idx+1}. {opt}" for idx, opt in enumerate(opcoes)])
-                await ctx.send(f"**Pergunta {i+1}/{perguntas}**\n{pergunta}\n{op_texto}\n(Responda com o número da opção)")
+                await interaction.channel.send(f"**Pergunta {i+1}/{perguntas}**\n{pergunta}\n{op_texto}\n(Responda com o número da opção)")
 
-                def check(m): return m.author == ctx.author and m.content.isdigit()
+                def check(m): return m.author == interaction.user and m.content.isdigit()
                 try:
                     msg = await bot.wait_for("message", check=check, timeout=20)
                     if opcoes[int(msg.content)-1] == resposta_correta:
-                        await ctx.send("✅ Acertou!")
+                        await interaction.channel.send("✅ Acertou!")
                         pontuacao += 1
                     else:
-                        await ctx.send(f"❌ Errou! A resposta correta é: {resposta_correta}")
+                        await interaction.channel.send(f"❌ Errou! A resposta correta é: {resposta_correta}")
                 except asyncio.TimeoutError:
-                    await ctx.send(f"⏰ Tempo esgotado! A resposta correta é: {resposta_correta}")
-    await ctx.send(f"🏆 Pontuação final: {pontuacao}/{perguntas}")
+                    await interaction.channel.send(f"⏰ Tempo esgotado! A resposta correta é: {resposta_correta}")
+    
+    await interaction.channel.send(f"🏆 Pontuação final: {pontuacao}/{perguntas}")
 
-@bot.hybrid_command(name='randomgif', description="Envia um GIF aleatório")
-@app_commands.describe(termo="Termo para buscar o GIF (padrão: meme)")
-async def random_gif(ctx, *, termo: str = "meme"):
+@bot.tree.command(name="randomgif", description="Envia um GIF aleatório")
+@app_commands.describe(termo="Termo para buscar o GIF")
+async def random_gif_slash(interaction: discord.Interaction, termo: str = "meme"):
     url = f"https://g.tenor.com/v1/search?q={termo}&key=LIVDSRZULELA&limit=10"
     try:
         async with aiohttp.ClientSession() as session:
@@ -328,33 +347,32 @@ async def random_gif(ctx, *, termo: str = "meme"):
                 if response.status == 200:
                     data = await response.json()
                     gif = random.choice(data['results'])
-                    await ctx.send(gif['media'][0]['gif']['url'])
+                    await interaction.response.send_message(gif['media'][0]['gif']['url'])
                 else:
-                    await ctx.send("❌ Não consegui pegar um GIF agora...")
+                    await interaction.response.send_message("❌ Não consegui pegar um GIF agora...")
     except Exception as e:
         print(e)
-        await ctx.send("❌ Ocorreu um erro ao tentar buscar o GIF.")
+        await interaction.response.send_message("❌ Ocorreu um erro ao tentar buscar o GIF.")
 
-@bot.hybrid_command(name='piada', description="O bot conta uma piada aleatória")
-async def piada(ctx):
+@bot.tree.command(name="piada", description="O bot conta uma piada aleatória")
+async def piada_slash(interaction: discord.Interaction):
     url = "https://v2.jokeapi.dev/joke/Any?lang=pt&blacklistFlags=nsfw,racist,sexist"
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 data = await resp.json()
                 if data["type"] == "single":
-                    await ctx.send(f"😂 {data['joke']}")
+                    await interaction.response.send_message(f"😂 {data['joke']}")
                 else:
-                    await ctx.send(f"😂 {data['setup']}\n⏱️ ...\n{data['delivery']}")
+                    await interaction.response.send_message(f"😂 {data['setup']}\n⏱️ ...\n{data['delivery']}")
     except Exception as e:
         print(f"Erro ao buscar piada: {e}")
-        await ctx.send("Ocorreu um erro ao buscar a piada.")
+        await interaction.response.send_message("Ocorreu um erro ao buscar a piada.")
 
 # -------------------- WEATHER --------------------
-@bot.hybrid_command(name='weather', description="Mostra o clima de uma cidade")
+@bot.tree.command(name="weather", description="Mostra o clima de uma cidade")
 @app_commands.describe(city="Nome da cidade")
-async def weather(ctx, *, city: str):
-    """Mostra o clima de uma cidade sem chave usando wttr.in"""
+async def weather_slash(interaction: discord.Interaction, city: str):
     url = f"http://wttr.in/{city}?format=j1&lang=pt"
     try:
         async with aiohttp.ClientSession() as session:
@@ -375,17 +393,16 @@ async def weather(ctx, *, city: str):
                     embed.add_field(name="Temperatura", value=f"{temp}°C")
                     embed.add_field(name="Umidade", value=f"{humidity}%")
                     embed.add_field(name="Vento", value=f"{wind} km/h")
-                    await ctx.send(embed=embed)
+                    await interaction.response.send_message(embed=embed)
                 else:
-                    await ctx.send(f"❌ Não consegui encontrar a cidade `{city}`.")
+                    await interaction.response.send_message(f"❌ Não consegui encontrar a cidade `{city}`.")
     except Exception as e:
         print(f"Erro weather: {e}")
-        await ctx.send("❌ Ocorreu um erro ao buscar o clima.")
+        await interaction.response.send_message("❌ Ocorreu um erro ao buscar o clima.")
 
 # -------------------- FACT --------------------
-@bot.hybrid_command(name='fact', description="Mostra um fato aleatório")
-async def fact(ctx):
-    """Mostra um fato aleatório em português usando API pública"""
+@bot.tree.command(name="fact", description="Mostra um fato aleatório")
+async def fact_slash(interaction: discord.Interaction):
     url = "https://uselessfacts.jsph.pl/random.json?language=pt"
     try:
         async with aiohttp.ClientSession() as session:
@@ -397,26 +414,26 @@ async def fact(ctx):
                         description=data.get("text", "Não consegui pegar um fato..."),
                         color=discord.Color.green()
                     )
-                    await ctx.send(embed=embed)
+                    await interaction.response.send_message(embed=embed)
                 else:
-                    await ctx.send("❌ Não consegui buscar um fato agora.")
+                    await interaction.response.send_message("❌ Não consegui buscar um fato agora.")
     except Exception as e:
         print(f"Erro fact: {e}")
-        await ctx.send("❌ Ocorreu um erro ao buscar um fato.")
+        await interaction.response.send_message("❌ Ocorreu um erro ao buscar um fato.")
 
-@bot.hybrid_command(name='flip', description="Jogo de cara ou coroa")
-async def flip(ctx):
+@bot.tree.command(name="flip", description="Jogo de cara ou coroa")
+async def flip_slash(interaction: discord.Interaction):
     resultado = random.choice(["Cara 🪙", "Coroa 🪙"])
     
     embed = discord.Embed(
         title="🎲 Cara ou Coroa",
-        description=f"{ctx.author.mention} jogou a moeda e saiu: **{resultado}**!",
+        description=f"{interaction.user.mention} jogou a moeda e saiu: **{resultado}**!",
         color=discord.Color.red()
     )
     embed.set_thumbnail(url=bot.user.display_avatar.url)
     embed.set_footer(text="ClownBoo - Palhaço do Discord 🤡")
     
-    await ctx.send(embed=embed)
+    await interaction.response.send_message(embed=embed)
 
 frases = [
     "O palhaço chegou! 🤡",
@@ -428,8 +445,8 @@ frases = [
     "O palhaço do mal está de olho! 👀"
 ]
 
-@bot.hybrid_command(name='clownboo', description="O bot fala uma frase aleatória")
-async def clownboo(ctx):
+@bot.tree.command(name="clownboo", description="O bot fala uma frase aleatória")
+async def clownboo_slash(interaction: discord.Interaction):
     frase = random.choice(frases)
     
     embed = discord.Embed(
@@ -438,9 +455,9 @@ async def clownboo(ctx):
         color=discord.Color.red()
     )
     embed.set_thumbnail(url=bot.user.display_avatar.url)
-    embed.set_footer(text=f"Comando usado por {ctx.author.name}")
+    embed.set_footer(text=f"Comando usado por {interaction.user.name}")
 
-    await ctx.send(embed=embed)
+    await interaction.response.send_message(embed=embed)
 
 # Contador de usos
 contagem_uso = {}
@@ -459,8 +476,8 @@ async def on_command_completion(ctx):
     with open("ranking.json", "w") as f:
         json.dump(contagem_uso, f)
 
-@bot.hybrid_command(name='rankclown', description="Mostra o ranking de quem mais usou o bot")
-async def rankclown(ctx):
+@bot.tree.command(name="rankclown", description="Mostra o ranking de quem mais usou o bot")
+async def rankclown_slash(interaction: discord.Interaction):
     try:
         with open("ranking.json", "r") as f:
             ranking = json.load(f)
@@ -468,7 +485,7 @@ async def rankclown(ctx):
         ranking = {}
 
     if not ranking:
-        await ctx.send("Ninguém usou o bot ainda! 🤡")
+        await interaction.response.send_message("Ninguém usou o bot ainda! 🤡")
         return
 
     ranking_ordenado = sorted(ranking.items(), key=lambda x: x[1], reverse=True)
@@ -487,7 +504,7 @@ async def rankclown(ctx):
             inline=False
         )
 
-    await ctx.send(embed=embed)
+    await interaction.response.send_message(embed=embed)
 
 @bot.event
 async def on_message(message):
@@ -500,8 +517,8 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # -------------------- CRÉDITOS --------------------
-@bot.hybrid_command(name='creditos', description="Mostra os créditos do ClownBoo")
-async def creditos(ctx):
+@bot.tree.command(name="creditos", description="Mostra os créditos do ClownBoo")
+async def creditos_slash(interaction: discord.Interaction):
     embed = discord.Embed(
         title="<:pd3:1407525193487749240> ClownBoo <:pd3:1407525193487749240>",
         description="O bot que traz memes, risadas e diversão para seu servidor!",
@@ -511,35 +528,104 @@ async def creditos(ctx):
     embed.add_field(name="<:git:1407889670464864418> GitHub", value="[Fizz909](https://github.com/Fizz909)", inline=False)
     embed.add_field(name="💬 Suporte", value="[Servidor Discord](https://clownboo.netlify.app/)", inline=False)
     embed.set_footer(text="Feito com 🤡 para a comunidade")
-    await ctx.send(embed=embed)
+    await interaction.response.send_message(embed=embed)
 
 # -------------------- HELP --------------------
-@bot.hybrid_command(name='help', aliases=['ajuda'], description="Mostra este painel de ajuda")
-async def help_command(ctx):
-    embed = discord.Embed(title="📜 Comandos da ClownBoo", description="Lista de comandos disponíveis: 14 ", color=discord.Color.green())
+@bot.tree.command(name="help", description="Mostra este painel de ajuda")
+async def help_slash(interaction: discord.Interaction):
+    embed = discord.Embed(title="📜 Comandos da ClownBoo", description="Lista de comandos disponíveis", color=discord.Color.green())
     cmds = [
-        ("&meme ou /meme", "Mostra um meme aleatório imediatamente."),
-        ("&memebomb <número> ou /memebomb", "Envia vários memes de uma vez (máx 10)."),
-        ("&dailymeme ou /dailymeme", "Receba seu meme diário exclusivo."),
-        ("&memeroulette ou /memeroulette", "Roleta de memes: sorte ou azar!"),
-        ("&setmemechannel <canal> ou /setmemechannel", "Define o canal de memes e ativa auto-postagem."),
-        ("&memestatus ou /memestatus", "Mostra o status atual do bot e do canal de memes."),
-        ("&ship <usuário1> <usuário2> ou /ship", "Mostra a compatibilidade entre dois usuários."),
-        ("&trivia [quantidade] ou /trivia", "Jogo de perguntas e respostas em português (padrão 3)."),
-        ("&randomgif [termo] ou /randomgif", "GIFs aleatórios de memes."),
-        ("&piada ou /piada", "O bot conta uma piada aleatória."),
-        ("&weather <cidade> ou /weather", "Mostra o clima em alguma cidade."),
-        ("&fact ou /fact", "Mostra um fato aleatório."),
-        ("&rankclown ou /rankclown", "Mostra o rank de quem usou a bot"),
-        ("&clownboo ou /clownboo", "O bot fala uma frase"),
-        ("&flip ou /flip", "Jogo de cara ou coroa simples"),
-        ("&creditos ou /creditos", "Mostra os créditos do ClownBoo."),
-        ("&help ou /help", "Mostra este painel de ajuda.")
+        ("/meme", "Mostra um meme aleatório imediatamente."),
+        ("/memebomb", "Envia vários memes de uma vez (máx 10)."),
+        ("/dailymeme", "Receba seu meme diário exclusivo."),
+        ("/memeroulette", "Roleta de memes: sorte ou azar!"),
+        ("/setmemechannel", "Define o canal de memes e ativa auto-postagem."),
+        ("/memestatus", "Mostra o status atual do bot e do canal de memes."),
+        ("/ship", "Mostra a compatibilidade entre dois usuários."),
+        ("/trivia", "Jogo de perguntas e respostas em português."),
+        ("/randomgif", "GIFs aleatórios de memes."),
+        ("/piada", "O bot conta uma piada aleatória."),
+        ("/weather", "Mostra o clima em alguma cidade."),
+        ("/fact", "Mostra um fato aleatório."),
+        ("/rankclown", "Mostra o rank de quem usou a bot"),
+        ("/clownboo", "O bot fala uma frase"),
+        ("/flip", "Jogo de cara ou coroa simples"),
+        ("/creditos", "Mostra os créditos do ClownBoo."),
+        ("/help", "Mostra este painel de ajuda.")
     ]
     for nome, desc in cmds:
         embed.add_field(name=nome, value=desc, inline=False)
     embed.set_footer(text="ClownBoo 🤡 | Divirta-se com os memes!")
-    await ctx.send(embed=embed)
+    await interaction.response.send_message(embed=embed)
+
+# -------------------- COMANDOS DE PREFIXO (para compatibilidade) --------------------
+@bot.command(name='meme')
+async def meme_prefix(ctx):
+    await ctx.invoke(bot.get_command('test_meme'))
+
+@bot.command(name='memestatus')
+async def memestatus_prefix(ctx):
+    await ctx.invoke(bot.get_command('meme_status'))
+
+@bot.command(name='memebomb')
+async def memebomb_prefix(ctx, amount: int = 5):
+    await ctx.invoke(bot.get_command('meme_bomb'), amount=amount)
+
+@bot.command(name='dailymeme')
+async def dailymeme_prefix(ctx):
+    await ctx.invoke(bot.get_command('daily_meme'))
+
+@bot.command(name='memeroulette')
+async def memeroulette_prefix(ctx):
+    await ctx.invoke(bot.get_command('meme_roulette'))
+
+@bot.command(name='ship')
+async def ship_prefix(ctx, user1: discord.Member, user2: discord.Member):
+    await ctx.invoke(bot.get_command('ship_command'), user1=user1, user2=user2)
+
+@bot.command(name='fight')
+async def fight_prefix(ctx, user1: discord.Member, user2: discord.Member):
+    await ctx.invoke(bot.get_command('fight_command'), user1=user1, user2=user2)
+
+@bot.command(name='trivia')
+async def trivia_prefix(ctx, perguntas: int = 3):
+    await ctx.invoke(bot.get_command('trivia_command'), perguntas=perguntas)
+
+@bot.command(name='randomgif')
+async def randomgif_prefix(ctx, *, termo: str = "meme"):
+    await ctx.invoke(bot.get_command('random_gif'), termo=termo)
+
+@bot.command(name='piada')
+async def piada_prefix(ctx):
+    await ctx.invoke(bot.get_command('piada_command'))
+
+@bot.command(name='weather')
+async def weather_prefix(ctx, *, city: str):
+    await ctx.invoke(bot.get_command('weather_command'), city=city)
+
+@bot.command(name='fact')
+async def fact_prefix(ctx):
+    await ctx.invoke(bot.get_command('fact_command'))
+
+@bot.command(name='flip')
+async def flip_prefix(ctx):
+    await ctx.invoke(bot.get_command('flip_command'))
+
+@bot.command(name='clownboo')
+async def clownboo_prefix(ctx):
+    await ctx.invoke(bot.get_command('clownboo_command'))
+
+@bot.command(name='rankclown')
+async def rankclown_prefix(ctx):
+    await ctx.invoke(bot.get_command('rankclown_command'))
+
+@bot.command(name='creditos')
+async def creditos_prefix(ctx):
+    await ctx.invoke(bot.get_command('creditos_command'))
+
+@bot.command(name='help', aliases=['ajuda'])
+async def help_prefix(ctx):
+    await ctx.invoke(bot.get_command('help_command'))
 
 # -------------------- RUN BOT --------------------
 if __name__ == "__main__":
