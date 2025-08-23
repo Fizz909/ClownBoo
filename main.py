@@ -475,7 +475,15 @@ async def rankclown(ctx):
 
     await ctx.send(embed=embed)
 
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
 
+    if bot.user in message.mentions:
+        await message.channel.send("Eu estou aqui pra divertir 🤡")
+
+    await bot.process_commands(message)
 
 
 
