@@ -386,9 +386,20 @@ async def fact(ctx):
         await ctx.send("❌ Ocorreu um erro ao buscar um fato.")
 
 @bot.command()
-async def caraoucoroa(ctx):
+async def flip(ctx):
     resultado = random.choice(["Cara 🪙", "Coroa 🪙"])
-    await ctx.send(f"{ctx.author.mention} jogou a moeda... {resultado}!")
+    
+    embed = discord.Embed(
+        title="🎲 Cara ou Coroa",
+        description=f"{ctx.author.mention} jogou a moeda e saiu: **{resultado}**!",
+        color=discord.Color.red()  # agora o embed é vermelho
+    )
+    # Coloca o avatar do bot como thumbnail
+    embed.set_thumbnail(url=bot.user.avatar.url)
+    embed.set_footer(text="ClownBoo - Palhaço do Discord 🤡")
+    
+    await ctx.send(embed=embed)
+
 
 frases = [
     "O palhaço chegou! 🤡",
@@ -407,25 +418,27 @@ async def clownboo(ctx):
     embed = discord.Embed(
         title="ClownBoo 🤡",
         description=frase,
-        color=discord.Color.orange()  # cor divertida de palhaço
+        color=discord.Color.red()
     )
-    embed.set_thumbnail(url="https://i.imgur.com/6Y2ZkYp.png")  # mini imagem de palhaço (pode trocar)
+    # Usa o avatar do bot como thumbnail
+    embed.set_thumbnail(url=bot.user.avatar.url)
     embed.set_footer(text=f"Comando usado por {ctx.author.name}")
 
     await ctx.send(embed=embed)
 
+
 contagem_uso = defaultdict(int)
 
+# Contar cada uso
 @bot.event
 async def on_command(ctx):
     contagem_uso[str(ctx.author.id)] += 1
-    # Salvar em arquivo para persistir
     with open("ranking.json", "w") as f:
         json.dump(contagem_uso, f)
 
+# Comando com embed
 @bot.command()
-async def rankingpalhaco(ctx):
-    # Carregar ranking
+async def rankingclown(ctx):
     try:
         with open("ranking.json", "r") as f:
             ranking = json.load(f)
@@ -436,13 +449,19 @@ async def rankingpalhaco(ctx):
         await ctx.send("Ninguém usou o bot ainda! 🤡")
         return
 
-    # Ordenar do mais ativo para o menos
     ranking_ordenado = sorted(ranking.items(), key=lambda x: x[1], reverse=True)
-    msg = "**🏆 Ranking Palhaço:**\n"
+    
+    embed = discord.Embed(
+        title="🏆 Ranking Palhaço",
+        description="Quem mais usou o ClownBoo",
+        color=discord.Color.red()
+    )
+
     for user_id, vezes in ranking_ordenado[:10]:
         user = await bot.fetch_user(int(user_id))
-        msg += f"{user.name}: {vezes} usos\n"
-    await ctx.send(msg)
+        embed.add_field(name=user.name, value=f"{vezes} usos", inline=False)
+
+    await ctx.send(embed=embed)
 
 
 # -------------------- CRÉDITOS --------------------
@@ -476,6 +495,9 @@ async def help_command(ctx):
         ("&piada", "O bot conta uma piada aleatória."),
         ("&weather <cidade>", "Mostra o clima em alguma cidade."),
         ("&fact", "Mostra um fato aleatório."),
+        ("&rankingclown", "Mostra o rank de quem usou a bot"),
+        ("&clownboo", "O bot fala uma frase"),
+        ("&flip", "Jogo de cara ou coroa simples"),
         ("&creditos", "Mostra os créditos do ClownBoo."),
         ("&help", "Mostra este painel de ajuda.")
     ]
