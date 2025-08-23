@@ -446,7 +446,7 @@ async def on_command_completion(ctx):
 
 # Comando com embed
 @bot.command()
-async def rankingclown(ctx):
+async def rankclown(ctx):
     try:
         with open("ranking.json", "r") as f:
             ranking = json.load(f)
@@ -510,7 +510,7 @@ async def help_command(ctx):
         ("&piada", "O bot conta uma piada aleatória."),
         ("&weather <cidade>", "Mostra o clima em alguma cidade."),
         ("&fact", "Mostra um fato aleatório."),
-        ("&rankingclown", "Mostra o rank de quem usou a bot"),
+        ("&rankclown", "Mostra o rank de quem usou a bot"),
         ("&clownboo", "O bot fala uma frase"),
         ("&flip", "Jogo de cara ou coroa simples"),
         ("&creditos", "Mostra os créditos do ClownBoo."),
