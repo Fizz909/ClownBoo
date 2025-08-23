@@ -14,7 +14,7 @@ import html  # Para decodificar entidades HTML
 from PIL import Image, ImageDraw, ImageFont
 import io
 
-keep_alive()
+
 
 # -------------------- CONFIG --------------------
 load_dotenv()
