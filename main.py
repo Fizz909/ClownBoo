@@ -460,15 +460,15 @@ async def rankingclown(ctx):
     ranking_ordenado = sorted(ranking.items(), key=lambda x: x[1], reverse=True)
 
     embed = discord.Embed(
-        title="<:pd3:1407525193487749240> 🏆 Ranking Palhaço",
-        description="Quem mais usou o ClownBoo",
+        title="<:pd3:1407525193487749240> Ranking Palhaço",
+        description="Quem mais usou o ClownBoo:",
         color=discord.Color.red()
     )
 
     for user_id, vezes in ranking_ordenado[:10]:
         user = await bot.fetch_user(int(user_id))
         embed.add_field(
-            name=f"<a:pd2:1407524312923246632> {user.name}",
+            name=f"<:pd:1407523919283355882> {user.name}",
             value=f"<a:pd2:1407524312923246632> {vezes} usos",
             inline=False
         )
