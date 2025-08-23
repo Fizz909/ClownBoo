@@ -3,6 +3,8 @@ from discord.ext import commands, tasks
 import aiohttp
 import asyncio
 import random
+import json
+from collections import defaultdict
 from datetime import datetime, timedelta
 import os
 from discord.ui import View, Button
@@ -383,6 +385,66 @@ async def fact(ctx):
         print(f"Erro fact: {e}")
         await ctx.send("❌ Ocorreu um erro ao buscar um fato.")
 
+@bot.command()
+async def caraoucoroa(ctx):
+    resultado = random.choice(["Cara 🪙", "Coroa 🪙"])
+    await ctx.send(f"{ctx.author.mention} jogou a moeda... {resultado}!")
+
+frases = [
+    "O palhaço chegou! 🤡",
+    "Boo! Você tomou um susto? 😱",
+    "Hahaha, o circo está armado! 🎪",
+    "Cuidado com a torta na cara! 🥧",
+    "Risos e confetes para você! 🎉",
+    "Prepare-se para a zoeira! 🤡🎈",
+    "O palhaço do mal está de olho! 👀"
+]
+
+@bot.command()
+async def clownboo(ctx):
+    frase = random.choice(frases)
+    
+    embed = discord.Embed(
+        title="ClownBoo 🤡",
+        description=frase,
+        color=discord.Color.orange()  # cor divertida de palhaço
+    )
+    embed.set_thumbnail(url="https://i.imgur.com/6Y2ZkYp.png")  # mini imagem de palhaço (pode trocar)
+    embed.set_footer(text=f"Comando usado por {ctx.author.name}")
+
+    await ctx.send(embed=embed)
+
+contagem_uso = defaultdict(int)
+
+@bot.event
+async def on_command(ctx):
+    contagem_uso[str(ctx.author.id)] += 1
+    # Salvar em arquivo para persistir
+    with open("ranking.json", "w") as f:
+        json.dump(contagem_uso, f)
+
+@bot.command()
+async def rankingpalhaco(ctx):
+    # Carregar ranking
+    try:
+        with open("ranking.json", "r") as f:
+            ranking = json.load(f)
+    except FileNotFoundError:
+        ranking = {}
+
+    if not ranking:
+        await ctx.send("Ninguém usou o bot ainda! 🤡")
+        return
+
+    # Ordenar do mais ativo para o menos
+    ranking_ordenado = sorted(ranking.items(), key=lambda x: x[1], reverse=True)
+    msg = "**🏆 Ranking Palhaço:**\n"
+    for user_id, vezes in ranking_ordenado[:10]:
+        user = await bot.fetch_user(int(user_id))
+        msg += f"{user.name}: {vezes} usos\n"
+    await ctx.send(msg)
+
+
 # -------------------- CRÉDITOS --------------------
 @bot.command(name='creditos')
 async def creditos(ctx):
@@ -400,7 +462,7 @@ async def creditos(ctx):
 # -------------------- HELP --------------------
 @bot.command(name='help', aliases=['ajuda'])
 async def help_command(ctx):
-    embed = discord.Embed(title="📜 Comandos da ClownBoo", description="Lista de comandos disponíveis:", color=discord.Color.green())
+    embed = discord.Embed(title="📜 Comandos da ClownBoo", description="Lista de comandos disponíveis: 14 ", color=discord.Color.green())
     cmds = [
         ("&meme", "Mostra um meme aleatório imediatamente."),
         ("&memebomb <número>", "Envia vários memes de uma vez (máx 10)."),
