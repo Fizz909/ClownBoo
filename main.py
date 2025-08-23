@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands, tasks
+from discord import app_commands
 import aiohttp
 import asyncio
 import random
@@ -10,11 +11,9 @@ import os
 from discord.ui import View, Button
 from dotenv import load_dotenv
 import html  # Para decodificar entidades HTML
-from keep_alive import keep_alive
 from PIL import Image, ImageDraw, ImageFont
 import io
 
-# -------------------- KEEP ALIVE --------------------
 keep_alive()
 
 # -------------------- CONFIG --------------------
@@ -91,10 +90,18 @@ async def on_ready():
     guild_count = len(bot.guilds)
     activity = discord.Activity(type=discord.ActivityType.watching, name=f"{guild_count} servidores 🤡")
     await bot.change_presence(activity=activity)
+    
+    # Sincronizar comandos slash
+    try:
+        synced = await bot.tree.sync()
+        print(f"Comandos slash sincronizados: {len(synced)} comandos")
+    except Exception as e:
+        print(f"Erro ao sincronizar comandos slash: {e}")
+    
     print("Status atualizado!")
 
 # -------------------- COMANDOS DE MEMES --------------------
-@bot.command(name='setmemechannel', aliases=['smc'])
+@bot.hybrid_command(name='setmemechannel', aliases=['smc'], description="Define o canal para envio automático de memes")
 @commands.has_permissions(manage_channels=True)
 async def set_meme_channel(ctx, channel: discord.TextChannel):
     global MEME_CHANNEL_ID
@@ -108,8 +115,9 @@ async def set_meme_channel(ctx, channel: discord.TextChannel):
         send_meme.start()
         await ctx.send("Auto-postagem de memes iniciada!")
 
-@bot.command(name='meme')
+@bot.hybrid_command(name='meme', description="Envia um meme aleatório")
 async def test_meme(ctx):
+    await ctx.defer()  # Para comandos slash que podem demorar
     meme = await fetch_random_meme()
     if meme:
         embed = discord.Embed(title=meme['title'], color=discord.Color.random())
@@ -119,7 +127,7 @@ async def test_meme(ctx):
     else:
         await ctx.send("Não consegui encontrar um meme.")
 
-@bot.command(name='memestatus')
+@bot.hybrid_command(name='memestatus', description="Mostra o status atual do bot de memes")
 async def meme_status(ctx):
     channel = bot.get_channel(MEME_CHANNEL_ID) if MEME_CHANNEL_ID else None
     embed = discord.Embed(title="Status da ClownBoo", color=discord.Color.blue())
@@ -132,7 +140,7 @@ async def meme_status(ctx):
         embed.add_field(name="Próximo Post", value=f"<t:{int(next_run.timestamp())}:R>", inline=False)
     await ctx.send(embed=embed)
 
-@bot.command(name='memebomb')
+@bot.hybrid_command(name='memebomb', description="Envia vários memes de uma vez (máx 10)")
 @commands.has_permissions(manage_channels=True)
 async def meme_bomb(ctx, amount: int = 5):
     if amount > 10:
@@ -147,7 +155,7 @@ async def meme_bomb(ctx, amount: int = 5):
             await ctx.send(embed=embed)
             await asyncio.sleep(1)
 
-@bot.command(name='dailymeme')
+@bot.hybrid_command(name='dailymeme', description="Receba seu meme diário exclusivo")
 async def daily_meme(ctx):
     user_id = ctx.author.id
     last_daily = COOLDOWNS.get(f'daily_{user_id}')
@@ -155,6 +163,8 @@ async def daily_meme(ctx):
         next_daily = last_daily + timedelta(hours=24)
         await ctx.send(f"Seu próximo meme diário estará disponível <t:{int(next_daily.timestamp())}:R>!")
         return
+    
+    await ctx.defer()  # Para comandos slash que podem demorar
     meme = await fetch_random_meme()
     if meme:
         COOLDOWNS[f'daily_{user_id}'] = datetime.now()
@@ -167,9 +177,11 @@ async def daily_meme(ctx):
     else:
         await ctx.send("Não consegui encontrar seu meme diário...")
 
-@bot.command(name='memeroulette')
+@bot.hybrid_command(name='memeroulette', description="Roleta de memes: sorte ou azar!")
 async def meme_roulette(ctx):
     nsfw_allowed = isinstance(ctx.channel, discord.TextChannel) and ctx.channel.is_nsfw()
+    
+    await ctx.defer()  # Para comandos slash que podem demorar
     meme = await fetch_random_meme(avoid_nsfw=not nsfw_allowed)
     if meme:
         if meme['nsfw'] and not nsfw_allowed:
@@ -187,18 +199,19 @@ async def meme_roulette(ctx):
         await ctx.send("A roleta quebrou... tente novamente mais tarde!")
 
 # -------------------- COMANDOS DIVERSOS --------------------
-@bot.command()
+@bot.hybrid_command(name='ship', description="Mostra a compatibilidade entre dois usuários")
 async def ship(ctx, user1: discord.Member, user2: discord.Member):
     """Gera uma porcentagem de compatibilidade e uma imagem shipando dois usuários"""
+    await ctx.defer()  # Para comandos slash que podem demorar
 
     # Gerar porcentagem de compatibilidade
     porcentagem = random.randint(0, 100)
 
     # Baixar avatares dos usuários
     async with aiohttp.ClientSession() as session:
-        async with session.get(str(user1.avatar.url)) as resp1:
+        async with session.get(str(user1.display_avatar.url)) as resp1:
             avatar1_bytes = await resp1.read()
-        async with session.get(str(user2.avatar.url)) as resp2:
+        async with session.get(str(user2.display_avatar.url)) as resp2:
             avatar2_bytes = await resp2.read()
 
     # Abrir imagens com Pillow
@@ -231,11 +244,10 @@ async def ship(ctx, user1: discord.Member, user2: discord.Member):
     )
     file = discord.File(fp=buffer, filename="ship.png")
     embed.set_image(url="attachment://ship.png")
-    embed.set_thumbnail(url=user1.avatar.url)
-    embed.set_footer(text=f"Shipper: {user2.display_name}", icon_url=user2.avatar.url)
+    embed.set_thumbnail(url=user1.display_avatar.url)
+    embed.set_footer(text=f"Shipper: {user2.display_name}", icon_url=user2.display_avatar.url)
 
-    await ctx.send(embed=embed)
-
+    await ctx.send(file=file, embed=embed)
 
 class FightButton(Button):
     def __init__(self, label, user, opponent):
@@ -258,7 +270,7 @@ class FightButton(Button):
         self.disabled = True
         await interaction.message.edit(view=self.view)
 
-@bot.command()
+@bot.hybrid_command(name='fight', description="Inicia uma batalha entre dois usuários")
 async def fight(ctx, user1: discord.Member, user2: discord.Member):
     embed = discord.Embed(
         title="⚔️ Batalha ClownBoo ⚔️",
@@ -270,8 +282,13 @@ async def fight(ctx, user1: discord.Member, user2: discord.Member):
     view.add_item(FightButton(label="Atacar!", user=user2, opponent=user1))
     await ctx.send(embed=embed, view=view)
 
-@bot.command(name='trivia')
+@bot.hybrid_command(name='trivia', description="Jogo de perguntas e respostas em português")
+@app_commands.describe(perguntas="Número de perguntas (padrão: 3)")
 async def trivia(ctx, perguntas: int = 3):
+    if perguntas > 10:
+        perguntas = 10
+        await ctx.send("Máximo de 10 perguntas definido.")
+    
     pontuacao = 0
     async with aiohttp.ClientSession() as session:
         for i in range(perguntas):
@@ -301,8 +318,9 @@ async def trivia(ctx, perguntas: int = 3):
                     await ctx.send(f"⏰ Tempo esgotado! A resposta correta é: {resposta_correta}")
     await ctx.send(f"🏆 Pontuação final: {pontuacao}/{perguntas}")
 
-@bot.command(name='randomgif')
-async def random_gif(ctx, *, termo="meme"):
+@bot.hybrid_command(name='randomgif', description="Envia um GIF aleatório")
+@app_commands.describe(termo="Termo para buscar o GIF (padrão: meme)")
+async def random_gif(ctx, *, termo: str = "meme"):
     url = f"https://g.tenor.com/v1/search?q={termo}&key=LIVDSRZULELA&limit=10"
     try:
         async with aiohttp.ClientSession() as session:
@@ -317,7 +335,7 @@ async def random_gif(ctx, *, termo="meme"):
         print(e)
         await ctx.send("❌ Ocorreu um erro ao tentar buscar o GIF.")
 
-@bot.command(name='piada')
+@bot.hybrid_command(name='piada', description="O bot conta uma piada aleatória")
 async def piada(ctx):
     url = "https://v2.jokeapi.dev/joke/Any?lang=pt&blacklistFlags=nsfw,racist,sexist"
     try:
@@ -333,7 +351,8 @@ async def piada(ctx):
         await ctx.send("Ocorreu um erro ao buscar a piada.")
 
 # -------------------- WEATHER --------------------
-@bot.command()
+@bot.hybrid_command(name='weather', description="Mostra o clima de uma cidade")
+@app_commands.describe(city="Nome da cidade")
 async def weather(ctx, *, city: str):
     """Mostra o clima de uma cidade sem chave usando wttr.in"""
     url = f"http://wttr.in/{city}?format=j1&lang=pt"
@@ -364,7 +383,7 @@ async def weather(ctx, *, city: str):
         await ctx.send("❌ Ocorreu um erro ao buscar o clima.")
 
 # -------------------- FACT --------------------
-@bot.command()
+@bot.hybrid_command(name='fact', description="Mostra um fato aleatório")
 async def fact(ctx):
     """Mostra um fato aleatório em português usando API pública"""
     url = "https://uselessfacts.jsph.pl/random.json?language=pt"
@@ -385,21 +404,19 @@ async def fact(ctx):
         print(f"Erro fact: {e}")
         await ctx.send("❌ Ocorreu um erro ao buscar um fato.")
 
-@bot.command()
+@bot.hybrid_command(name='flip', description="Jogo de cara ou coroa")
 async def flip(ctx):
     resultado = random.choice(["Cara 🪙", "Coroa 🪙"])
     
     embed = discord.Embed(
         title="🎲 Cara ou Coroa",
         description=f"{ctx.author.mention} jogou a moeda e saiu: **{resultado}**!",
-        color=discord.Color.red()  # agora o embed é vermelho
+        color=discord.Color.red()
     )
-    # Coloca o avatar do bot como thumbnail
-    embed.set_thumbnail(url=bot.user.avatar.url)
+    embed.set_thumbnail(url=bot.user.display_avatar.url)
     embed.set_footer(text="ClownBoo - Palhaço do Discord 🤡")
     
     await ctx.send(embed=embed)
-
 
 frases = [
     "O palhaço chegou! 🤡",
@@ -411,7 +428,7 @@ frases = [
     "O palhaço do mal está de olho! 👀"
 ]
 
-@bot.command()
+@bot.hybrid_command(name='clownboo', description="O bot fala uma frase aleatória")
 async def clownboo(ctx):
     frase = random.choice(frases)
     
@@ -420,8 +437,7 @@ async def clownboo(ctx):
         description=frase,
         color=discord.Color.red()
     )
-    # Usa o avatar do bot como thumbnail
-    embed.set_thumbnail(url=bot.user.avatar.url)
+    embed.set_thumbnail(url=bot.user.display_avatar.url)
     embed.set_footer(text=f"Comando usado por {ctx.author.name}")
 
     await ctx.send(embed=embed)
@@ -443,9 +459,7 @@ async def on_command_completion(ctx):
     with open("ranking.json", "w") as f:
         json.dump(contagem_uso, f)
 
-
-# Comando com embed
-@bot.command()
+@bot.hybrid_command(name='rankclown', description="Mostra o ranking de quem mais usou o bot")
 async def rankclown(ctx):
     try:
         with open("ranking.json", "r") as f:
@@ -485,10 +499,8 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
-
-
 # -------------------- CRÉDITOS --------------------
-@bot.command(name='creditos')
+@bot.hybrid_command(name='creditos', description="Mostra os créditos do ClownBoo")
 async def creditos(ctx):
     embed = discord.Embed(
         title="<:pd3:1407525193487749240> ClownBoo <:pd3:1407525193487749240>",
@@ -502,27 +514,27 @@ async def creditos(ctx):
     await ctx.send(embed=embed)
 
 # -------------------- HELP --------------------
-@bot.command(name='help', aliases=['ajuda'])
+@bot.hybrid_command(name='help', aliases=['ajuda'], description="Mostra este painel de ajuda")
 async def help_command(ctx):
     embed = discord.Embed(title="📜 Comandos da ClownBoo", description="Lista de comandos disponíveis: 14 ", color=discord.Color.green())
     cmds = [
-        ("&meme", "Mostra um meme aleatório imediatamente."),
-        ("&memebomb <número>", "Envia vários memes de uma vez (máx 10)."),
-        ("&dailymeme", "Receba seu meme diário exclusivo."),
-        ("&memeroulette", "Roleta de memes: sorte ou azar!"),
-        ("&setmemechannel <canal>", "Define o canal de memes e ativa auto-postagem."),
-        ("&memestatus", "Mostra o status atual do bot e do canal de memes."),
-        ("&ship <usuário1> <usuário2>", "Mostra a compatibilidade entre dois usuários."),
-        ("&trivia [quantidade]", "Jogo de perguntas e respostas em português (padrão 3)."),
-        ("&randomgif [termo]", "GIFs aleatórios de memes."),
-        ("&piada", "O bot conta uma piada aleatória."),
-        ("&weather <cidade>", "Mostra o clima em alguma cidade."),
-        ("&fact", "Mostra um fato aleatório."),
-        ("&rankclown", "Mostra o rank de quem usou a bot"),
-        ("&clownboo", "O bot fala uma frase"),
-        ("&flip", "Jogo de cara ou coroa simples"),
-        ("&creditos", "Mostra os créditos do ClownBoo."),
-        ("&help", "Mostra este painel de ajuda.")
+        ("&meme ou /meme", "Mostra um meme aleatório imediatamente."),
+        ("&memebomb <número> ou /memebomb", "Envia vários memes de uma vez (máx 10)."),
+        ("&dailymeme ou /dailymeme", "Receba seu meme diário exclusivo."),
+        ("&memeroulette ou /memeroulette", "Roleta de memes: sorte ou azar!"),
+        ("&setmemechannel <canal> ou /setmemechannel", "Define o canal de memes e ativa auto-postagem."),
+        ("&memestatus ou /memestatus", "Mostra o status atual do bot e do canal de memes."),
+        ("&ship <usuário1> <usuário2> ou /ship", "Mostra a compatibilidade entre dois usuários."),
+        ("&trivia [quantidade] ou /trivia", "Jogo de perguntas e respostas em português (padrão 3)."),
+        ("&randomgif [termo] ou /randomgif", "GIFs aleatórios de memes."),
+        ("&piada ou /piada", "O bot conta uma piada aleatória."),
+        ("&weather <cidade> ou /weather", "Mostra o clima em alguma cidade."),
+        ("&fact ou /fact", "Mostra um fato aleatório."),
+        ("&rankclown ou /rankclown", "Mostra o rank de quem usou a bot"),
+        ("&clownboo ou /clownboo", "O bot fala uma frase"),
+        ("&flip ou /flip", "Jogo de cara ou coroa simples"),
+        ("&creditos ou /creditos", "Mostra os créditos do ClownBoo."),
+        ("&help ou /help", "Mostra este painel de ajuda.")
     ]
     for nome, desc in cmds:
         embed.add_field(name=nome, value=desc, inline=False)
