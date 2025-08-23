@@ -426,15 +426,23 @@ async def clownboo(ctx):
 
     await ctx.send(embed=embed)
 
+# Contador de usos
+contagem_uso = {}
 
-contagem_uso = defaultdict(int)
-
-# Contar cada uso
 @bot.event
-async def on_command(ctx):
-    contagem_uso[str(ctx.author.id)] += 1
+async def on_command_completion(ctx):
+    global contagem_uso
+    try:
+        with open("ranking.json", "r") as f:
+            contagem_uso = json.load(f)
+    except FileNotFoundError:
+        contagem_uso = {}
+
+    contagem_uso[str(ctx.author.id)] = contagem_uso.get(str(ctx.author.id), 0) + 1
+
     with open("ranking.json", "w") as f:
         json.dump(contagem_uso, f)
+
 
 # Comando com embed
 @bot.command()
@@ -450,18 +458,25 @@ async def rankingclown(ctx):
         return
 
     ranking_ordenado = sorted(ranking.items(), key=lambda x: x[1], reverse=True)
-    
+
     embed = discord.Embed(
-        title="🏆 Ranking Palhaço",
+        title="<:pd3:1407525193487749240> 🏆 Ranking Palhaço",
         description="Quem mais usou o ClownBoo",
         color=discord.Color.red()
     )
 
     for user_id, vezes in ranking_ordenado[:10]:
         user = await bot.fetch_user(int(user_id))
-        embed.add_field(name=user.name, value=f"{vezes} usos", inline=False)
+        embed.add_field(
+            name=f"<a:pd2:1407524312923246632> {user.name}",
+            value=f"<a:pd2:1407524312923246632> {vezes} usos",
+            inline=False
+        )
 
     await ctx.send(embed=embed)
+
+
+
 
 
 # -------------------- CRÉDITOS --------------------
