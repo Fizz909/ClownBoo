@@ -416,7 +416,7 @@ async def clownboo(ctx):
     frase = random.choice(frases)
     
     embed = discord.Embed(
-        title="ClownBoo 🤡",
+        title=" 🤡 - ClownBoo",
         description=frase,
         color=discord.Color.red()
     )
