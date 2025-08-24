@@ -894,7 +894,7 @@ async def creditos(ctx):
     )
     embed.add_field(name=" Criador", value="[Fizz404](https://fizzboo.netlify.app/)", inline=False)
     embed.add_field(name=" GitHub", value="[Fizz909](https://github.com/Fizz909)", inline=False)
-    embed.add_field(name="💬 Suporte", value="[Servidor Discord](https://clownboo.netlify.app/)", inline=False)
+    embed.add_field(name="💬 Suporte", value="[Servidor Discord](https://discord.gg/gdgxkMDP5m)", inline=False)
     embed.set_footer(text="Feito com 🤡 para a comunidade")
     await ctx.send(embed=embed)
 
