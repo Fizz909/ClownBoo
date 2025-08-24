@@ -26,7 +26,8 @@ intents.presences = True
 bot = commands.Bot(command_prefix='&', intents=intents, help_command=None)
 
 # -------------------- MEMES --------------------
-MEME_CHANNEL_ID = None
+MEME_CHANNELS = {}  # {guild_id: channel_id}
+
 INTERVAL_MINUTES = 60
 SUBREDDITS = [
     'memes','wholesomememes','ProgrammerHumor','MemesBrasil','Brasil',
@@ -66,22 +67,23 @@ async def fetch_random_meme(avoid_nsfw=True):
 # -------------------- TASK DE MEMES --------------------
 @tasks.loop(minutes=INTERVAL_MINUTES)
 async def send_meme():
-    if MEME_CHANNEL_ID is None:
-        return
-    channel = bot.get_channel(MEME_CHANNEL_ID)
-    if not channel:
-        return
-    meme = await fetch_random_meme()
-    if meme:
-        embed = discord.Embed(title=meme['title'], color=discord.Color.random())
-        embed.set_image(url=meme['url'])
-        embed.set_footer(text=f"r/{meme['subreddit']} | Post original")
-        try:
-            await channel.send(embed=embed)
-            print(f"{datetime.now().strftime('%H:%M:%S')} - Meme enviado: r/{meme['subreddit']}")
-        except Exception as e:
-            print(f"Erro ao enviar meme: {e}")
-
+    for guild_id, channel_id in list(MEME_CHANNELS.items()):  # Usar list() para evitar mudanças durante iteração
+        channel = bot.get_channel(channel_id)
+        if channel:
+            meme = await fetch_random_meme()
+            if meme:
+                embed = discord.Embed(title=meme['title'], color=discord.Color.random())
+                embed.set_image(url=meme['url'])
+                embed.set_footer(text=f"r/{meme['subreddit']} | Post original")
+                try:
+                    await channel.send(embed=embed)
+                    print(f"{datetime.now().strftime('%H:%M:%S')} - Meme enviado no servidor {channel.guild.name}: r/{meme['subreddit']}")
+                except Exception as e:
+                    print(f"Erro ao enviar meme no servidor {channel.guild.name}: {e}")
+        else:
+            # Se o canal não existe mais, remover do dicionário
+            del MEME_CHANNELS[guild_id]
+            print(f"Canal removido (não existe mais) do servidor ID: {guild_id}")
 # -------------------- EVENTOS --------------------
 @bot.event
 async def on_ready():
@@ -123,34 +125,37 @@ async def on_guild_join(guild):
 @app_commands.describe(channel="Canal onde os memes serão enviados")
 @app_commands.checks.has_permissions(manage_channels=True)
 async def set_meme_channel(interaction: discord.Interaction, channel: discord.TextChannel):
-    global MEME_CHANNEL_ID
     perms = channel.permissions_for(interaction.guild.me)
     if not (perms.send_messages and perms.embed_links):
         await interaction.response.send_message("Preciso de permissões para enviar mensagens e embeds neste canal!", ephemeral=True)
         return
     
-    MEME_CHANNEL_ID = channel.id
-    await interaction.response.send_message(f"Canal de memes definido para {channel.mention}")
+    # Armazenar por servidor
+    MEME_CHANNELS[interaction.guild.id] = channel.id
+    await interaction.response.send_message(f"✅ Canal de memes definido para {channel.mention}")
     
     if not send_meme.is_running():
         send_meme.start()
-        await interaction.followup.send("Auto-postagem de memes iniciada!")
-
+        await interaction.followup.send("🎪 Auto-postagem de memes iniciada!")
 @bot.command()
 @commands.has_permissions(manage_channels=True)
-async def setmemechannel(ctx, channel: discord.TextChannel):
-    global MEME_CHANNEL_ID
-    perms = channel.permissions_for(ctx.guild.me)
-    if not (perms.send_messages and perms.embed_links):
-        await ctx.send("Preciso de permissões para enviar mensagens e embeds neste canal!")
+async def setmemechannel(ctx, channel: discord.TextChannel = None):
+    if channel is None:
+        await ctx.send("❌ Você precisa mencionar um canal! Exemplo: `&setmemechannel #canal-de-memes`")
         return
     
-    MEME_CHANNEL_ID = channel.id
-    await ctx.send(f"Canal de memes definido para {channel.mention}")
+    perms = channel.permissions_for(ctx.guild.me)
+    if not (perms.send_messages and perms.embed_links):
+        await ctx.send("❌ Preciso de permissões para enviar mensagens e embeds neste canal!")
+        return
+    
+    # Armazenar por servidor
+    MEME_CHANNELS[ctx.guild.id] = channel.id
+    await ctx.send(f"✅ Canal de memes definido para {channel.mention}")
     
     if not send_meme.is_running():
         send_meme.start()
-        await ctx.send("Auto-postagem de memes iniciada!")
+        await ctx.send("🎪 Auto-postagem de memes iniciada!")
 
 @bot.tree.command(name="meme", description="Envia um meme aleatório")
 async def meme_slash(interaction: discord.Interaction):
@@ -178,7 +183,9 @@ async def meme(ctx):
 
 @bot.tree.command(name="memestatus", description="Mostra o status atual do bot de memes")
 async def meme_status_slash(interaction: discord.Interaction):
-    channel = bot.get_channel(MEME_CHANNEL_ID) if MEME_CHANNEL_ID else None
+    channel_id = MEME_CHANNELS.get(interaction.guild.id)
+    channel = interaction.guild.get_channel(channel_id) if channel_id else None
+    
     embed = discord.Embed(title="Status da ClownBoo", color=discord.Color.blue())
     embed.add_field(name="Canal de Memes", value=channel.mention if channel else "Não definido", inline=False)
     embed.add_field(name="Status", value="ATIVO" if send_meme.is_running() else "PAUSADO", inline=False)
@@ -193,7 +200,9 @@ async def meme_status_slash(interaction: discord.Interaction):
 
 @bot.command()
 async def memestatus(ctx):
-    channel = bot.get_channel(MEME_CHANNEL_ID) if MEME_CHANNEL_ID else None
+    channel_id = MEME_CHANNELS.get(ctx.guild.id)
+    channel = ctx.guild.get_channel(channel_id) if channel_id else None
+    
     embed = discord.Embed(title="Status da ClownBoo", color=discord.Color.blue())
     embed.add_field(name="Canal de Memes", value=channel.mention if channel else "Não definido", inline=False)
     embed.add_field(name="Status", value="ATIVO" if send_meme.is_running() else "PAUSADO", inline=False)
@@ -206,40 +215,42 @@ async def memestatus(ctx):
     
     await ctx.send(embed=embed)
 
-@bot.tree.command(name="memebomb", description="Envia vários memes de uma vez (máx 10)")
+@bot.event
+async def on_guild_remove(guild):
+    """Limpa o canal de memes quando o bot é removido do servidor"""
+    if guild.id in MEME_CHANNELS:
+        del MEME_CHANNELS[guild.id]
+        print(f"Canal de memes removido para o servidor: {guild.name}")
+
+@bot.tree.command(name="memebomb", description="Envia vários memes de uma vez (máx 10) - Apenas você vê")
 @app_commands.describe(amount="Quantidade de memes para enviar")
 @app_commands.checks.has_permissions(manage_channels=True)
 async def meme_bomb_slash(interaction: discord.Interaction, amount: int = 5):
+    # Validar números negativos e zero
+    if amount <= 0:
+        await interaction.response.send_message("❌ A quantidade deve ser um número positivo maior que zero!", ephemeral=True)
+        return
+    
     if amount > 10:
         amount = 10
+        await interaction.response.send_message("⚠️ Definido para o máximo de 10 memes!", ephemeral=True)
+    else:
+        # Responder de forma ephemeral apenas se não foi respondido acima
+        await interaction.response.send_message(f"🎯 Preparando {amount} memes para você...", ephemeral=True)
     
-    await interaction.response.send_message(f"Enviando {amount} memes de uma vez!")
-    
-    for i in range(amount):
-        meme = await fetch_random_meme()
-        if meme:
-            embed = discord.Emembed(title=meme['title'], color=discord.Color.random())
-            embed.set_image(url=meme['url'])
-            embed.set_footer(text=f"Meme {i+1}/{amount} | r/{meme['subreddit']}")
-            await interaction.followup.send(embed=embed)
-            await asyncio.sleep(1)
-
-@bot.command()
-@commands.has_permissions(manage_channels=True)
-async def memebomb(ctx, amount: int = 5):
-    if amount > 10:
-        amount = 10
-    
-    await ctx.send(f"Enviando {amount} memes de uma vez!")
-    
+    # Enviar memes em modo ephemeral
     for i in range(amount):
         meme = await fetch_random_meme()
         if meme:
             embed = discord.Embed(title=meme['title'], color=discord.Color.random())
             embed.set_image(url=meme['url'])
             embed.set_footer(text=f"Meme {i+1}/{amount} | r/{meme['subreddit']}")
-            await ctx.send(embed=embed)
-            await asyncio.sleep(1)
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            await asyncio.sleep(1)  # Pequena pausa entre memes
+    
+    # Mensagem final
+    await interaction.followup.send(f"✅ **Pronto! {amount} memes enviados em modo privado.**", ephemeral=True)
+
 
 @bot.tree.command(name="dailymeme", description="Receba seu meme diário exclusivo")
 async def daily_meme_slash(interaction: discord.Interaction):
@@ -387,7 +398,17 @@ async def ship_slash(interaction: discord.Interaction, user1: discord.Member, us
     await interaction.followup.send(file=file, embed=embed)
 
 @bot.command()
-async def ship(ctx, user1: discord.Member, user2: discord.Member):
+async def ship(ctx, user1: discord.Member = None, user2: discord.Member = None):
+    # Verificar se os dois usuários foram mencionados
+    if user1 is None or user2 is None:
+        await ctx.send("❌ Você precisa mencionar dois usuários! Exemplo: `&ship @usuário1 @usuário2`")
+        return
+    
+    # Verificar se não está tentando shippar consigo mesmo
+    if user1 == user2:
+        await ctx.send("❌ Você não pode shippar alguém consigo mesmo! Tente com outro usuário.")
+        return
+    
     # Gerar porcentagem de compatibilidade
     porcentagem = random.randint(0, 100)
 
@@ -696,34 +717,7 @@ async def weather_slash(interaction: discord.Interaction, city: str):
         print(f"Erro weather: {e}")
         await interaction.followup.send("❌ Ocorreu um erro ao buscar o clima.")
 
-@bot.command()
-async def weather(ctx, *, city: str):
-    url = f"http://wttr.in/{city}?format=j1&lang=pt"
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    current = data['current_condition'][0]
-                    temp = current['temp_C']
-                    desc = current['weatherDesc'][0]['value']
-                    humidity = current['humidity']
-                    wind = current['windspeedKmph']
 
-                    embed = discord.Embed(
-                        title=f"🌤️ Clima em {city.capitalize()}",
-                        description=f"{desc}",
-                        color=discord.Color.blue()
-                    )
-                    embed.add_field(name="Temperatura", value=f"{temp}°C")
-                    embed.add_field(name="Umidade", value=f"{humidity}%")
-                    embed.add_field(name="Vento", value=f"{wind} km/h")
-                    await ctx.send(embed=embed)
-                else:
-                    await ctx.send(f"❌ Não consegui encontrar a cidade `{city}`.")
-    except Exception as e:
-        print(f"Erro weather: {e}")
-        await ctx.send("❌ Ocorreu um erro ao buscar o clima.")
 
 # -------------------- FACT --------------------
 @bot.tree.command(name="fact", description="Mostra um fato aleatório")
