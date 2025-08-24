@@ -236,7 +236,7 @@ async def meme_bomb_slash(interaction: discord.Interaction, amount: int = 5):
         await interaction.response.send_message("⚠️ Definido para o máximo de 10 memes!", ephemeral=True)
     else:
         # Responder de forma ephemeral apenas se não foi respondido acima
-        await interaction.response.send_message(f"🎯 Preparando {amount} memes para você...", ephemeral=True)
+        await interaction.response.send_message(f" → Preparando {amount} memes para você...", ephemeral=True)
     
     # Enviar memes em modo ephemeral
     for i in range(amount):
@@ -248,8 +248,7 @@ async def meme_bomb_slash(interaction: discord.Interaction, amount: int = 5):
             await interaction.followup.send(embed=embed, ephemeral=True)
             await asyncio.sleep(1)  # Pequena pausa entre memes
     
-    # Mensagem final
-    await interaction.followup.send(f"✅ **Pronto! {amount} memes enviados em modo privado.**", ephemeral=True)
+
 
 
 @bot.tree.command(name="dailymeme", description="Receba seu meme diário exclusivo")
@@ -454,51 +453,6 @@ async def ship(ctx, user1: discord.Member = None, user2: discord.Member = None):
 
     await ctx.send(file=file, embed=embed)
 
-class FightButton(Button):
-    def __init__(self, label, user, opponent):
-        super().__init__(label=label, style=discord.ButtonStyle.primary)
-        self.user = user
-        self.opponent = opponent
-        self.dano = random.randint(5, 20)
-
-    async def callback(self, interaction: discord.Interaction):
-        ataques = ["💥", "🔥", "⚡", "😱", "🤡"]
-        frases = [
-            "levou um golpe crítico!",
-            "caiu no chão!",
-            "está confuso 😵",
-            "não acredita no que aconteceu!",
-            "recebeu um ataque secreto!"
-        ]
-        result = f"{self.user.display_name} {random.choice(frases)} {random.choice(ataques)} (-{self.dano} HP para {self.opponent.display_name})"
-        await interaction.response.send_message(result, ephemeral=False)
-        self.disabled = True
-        await interaction.message.edit(view=self.view)
-
-@bot.tree.command(name="fight", description="Inicia uma batalha entre dois usuários")
-@app_commands.describe(user1="Primeiro usuário", user2="Segundo usuário")
-async def fight_slash(interaction: discord.Interaction, user1: discord.Member, user2: discord.Member):
-    embed = discord.Embed(
-        title="⚔️ Batalha ClownBoo ⚔️",
-        description=f"{user1.display_name} VS {user2.display_name}\nClique nos botões para atacar!",
-        color=discord.Color.random()
-    )
-    view = View(timeout=30)
-    view.add_item(FightButton(label="Atacar!", user=user1, opponent=user2))
-    view.add_item(FightButton(label="Atacar!", user=user2, opponent=user1))
-    await interaction.response.send_message(embed=embed, view=view)
-
-@bot.command()
-async def fight(ctx, user1: discord.Member, user2: discord.Member):
-    embed = discord.Embed(
-        title="⚔️ Batalha ClownBoo ⚔️",
-        description=f"{user1.display_name} VS {user2.display_name}\nClique nos botões para atacar!",
-        color=discord.Color.random()
-    )
-    view = View(timeout=30)
-    view.add_item(FightButton(label="Atacar!", user=user1, opponent=user2))
-    view.add_item(FightButton(label="Atacar!", user=user2, opponent=user1))
-    await ctx.send(embed=embed, view=view)
 
 @bot.tree.command(name="trivia", description="Jogo de perguntas e respostas em português")
 @app_commands.describe(perguntas="Número de perguntas (padrão: 3)")
