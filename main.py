@@ -255,7 +255,7 @@ async def daily_meme_slash(interaction: discord.Interaction):
     
     meme = await fetch_random_meme()
     if meme:
-        COOLDOWNS[f'daily_{user_id'] = datetime.now()
+        COOLDOWNS[f'daily_{user_id}'] = datetime.now()
         embed = discord.Embed(
             title=f"Meme Diário de {interaction.user.display_name}",
             description=meme['title'],
