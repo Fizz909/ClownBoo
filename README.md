@@ -1,6 +1,6 @@
 # 🤡 ClownBoo
 
-A fun bot that feeds your server with **daily, classic, or random memes**!
+- A fun bot that feeds your server with **daily, classic, or random memes**!
 ---
 
 ## 💻 Commands
