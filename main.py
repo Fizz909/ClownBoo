@@ -866,7 +866,9 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    if bot.user in message.mentions:
+    # Verifica se o bot foi mencionado E a mensagem não é uma resposta
+    if (bot.user in message.mentions and 
+        not message.reference):  # Não é uma resposta a outra mensagem
         await message.channel.send("Eu estou aqui pra divertir 🤡")
 
     await bot.process_commands(message)
