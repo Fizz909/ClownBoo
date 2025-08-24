@@ -1,27 +1,37 @@
 # 🤡 ClownBoo
 
-Um bot divertido que abastece seu servidor com **memes diários, clássicos ou aleatórios**!
-
+A fun bot that feeds your server with **daily, classic, or random memes**!
 ---
 
-## 💻 Comandos
+## 💻 Commands
 
-| Comando | Descrição |
+| Commands | Description |
 |---------|-----------|
-| `&meme` | Envia um meme aleatório |
-| `&memebomb` | Envia 5 memes em sequência |
-| `&dailymeme` | Seu meme diário garantido |
-| `&memeroulette` | Roleta de memes surpresa |
+| `&meme` | Send a random meme |
+| `&dailymeme` | Your daily meme guaranteed |
+| `&memeroulette` | Surprise meme roulette |
+| `&setmemechannel` | Set meme channel |
+| `&ship` | Shows compatibility between users |
+| `&trivia` | Questions and answers |
+| `&randomgif` | Random GIFs |
+| `&piada` | Tell a joke |
+| `&weather` | Shows the weather |
+| `&fact` | Tell random fact |
+| `&flip` | Heads or Tails Game |
+| `&clownboo` | Random phrase from the bot |
+| `&rankclown` | Ranking of who used the bot the most |
+| `&creditos` | Bot credits |
+| `&help` | Show help embled |
 
 ---
 
-## 🌟 Recursos
+## 🌟 Features
 
-- Memes diários para animar seu servidor  
-- Roleta divertida para momentos aleatórios  
-- Sequência de memes para explodir de rir 
+- Daily memes to liven up your server
+- Fun roulette for random moments
+- A meme sequence to make you laugh out loud
 
 ---
 
 ![Imagem Bakery](MemeBot.png)
-**Sem graça? Chama a ClownBoo!**
+**Not funny? Call ClownBoo!**
