@@ -379,39 +379,55 @@ async def ship_slash(interaction: discord.Interaction, user1: discord.Member, us
     avatar1 = avatar1.resize((200, 200), Image.LANCZOS)
     avatar2 = avatar2.resize((200, 200), Image.LANCZOS)
     
+    # Criar máscaras circulares para os avatares
+    mask = Image.new('L', (200, 200), 0)
+    draw_mask = ImageDraw.Draw(mask)
+    draw_mask.ellipse((0, 0, 200, 200), fill=255)
+    
+    avatar1_circle = Image.new('RGBA', (200, 200), (0, 0, 0, 0))
+    avatar1_circle.paste(avatar1, (0, 0), mask)
+    
+    avatar2_circle = Image.new('RGBA', (200, 200), (0, 0, 0, 0))
+    avatar2_circle.paste(avatar2, (0, 0), mask)
+    
     # Criar fundo maior
-    fundo = Image.new("RGBA", (500, 300), (255, 255, 255, 0))
+    fundo = Image.new("RGBA", (600, 300), (255, 255, 255, 0))
     
     # Colocar avatares nas laterais
-    fundo.paste(avatar1, (50, 50), avatar1)
-    fundo.paste(avatar2, (250, 50), avatar2)
+    fundo.paste(avatar1_circle, (50, 50), avatar1_circle)
+    fundo.paste(avatar2_circle, (350, 50), avatar2_circle)
     
-    # Desenhar coração no meio
+    # Carregar imagem do coração PNG
+    try:
+        # Tente carregar o coração dos arquivos do bot
+        coracao = Image.open("coração.png").convert("RGBA")
+    except FileNotFoundError:
+        # Se não encontrar, use um coração padrão (fallback)
+        coracao = Image.new("RGBA", (100, 100), (255, 0, 0, 0))
+        draw_coracao = ImageDraw.Draw(coracao)
+        draw_coracao.ellipse((0, 0, 50, 50), fill="red")
+        draw_coracao.ellipse((50, 0, 100, 50), fill="red")
+        draw_coracao.polygon([(0, 25), (100, 25), (50, 100)], fill="red")
+    
+    # Redimensionar o coração se necessário
+    coracao = coracao.resize((120, 120), Image.LANCZOS)
+    
+    # Posição do coração no meio
+    heart_x = 250
+    heart_y = 110
+    
+    # Colocar o coração no fundo
+    fundo.paste(coracao, (heart_x, heart_y), coracao)
+    
+    # Desenhar porcentagem no centro do coração
     draw = ImageDraw.Draw(fundo)
-    
-    # Posição do coração
-    heart_x = 225
-    heart_y = 150
-    
-    # Desenhar coração
-    heart_size = 60
-    # Parte esquerda do coração
-    draw.ellipse((heart_x - heart_size, heart_y - heart_size//2, 
-                 heart_x, heart_y + heart_size//2), fill="red", outline="white", width=3)
-    # Parte direita do coração
-    draw.ellipse((heart_x, heart_y - heart_size//2, 
-                 heart_x + heart_size, heart_y + heart_size//2), fill="red", outline="white", width=3)
-    # Parte inferior do coração (triângulo)
-    draw.polygon([(heart_x - heart_size, heart_y),
-                 (heart_x + heart_size, heart_y),
-                 (heart_x, heart_y + heart_size)], fill="red", outline="white", width=3)
     
     # Adicionar porcentagem em caixa alta no centro do coração
     try:
-        font = ImageFont.truetype("arialbd.ttf", 30)  # Fonte em negrito
+        font = ImageFont.truetype("arialbd.ttf", 35)  # Fonte maior e em negrito
     except:
         try:
-            font = ImageFont.truetype("arial.ttf", 30)
+            font = ImageFont.truetype("arial.ttf", 35)
         except:
             font = ImageFont.load_default()
     
@@ -422,33 +438,33 @@ async def ship_slash(interaction: discord.Interaction, user1: discord.Member, us
     text_height = text_bbox[3] - text_bbox[1]
     
     # Posicionar texto no centro do coração
-    text_x = heart_x - text_width // 2
-    text_y = heart_y - text_height // 2 - 5
+    text_x = heart_x + 60 - text_width // 2  # 60 é metade da largura do coração
+    text_y = heart_y + 60 - text_height // 2  # 60 é metade da altura do coração
     
     # Adicionar contorno ao texto
-    for offset in [(1, 1), (-1, 1), (1, -1), (-1, -1)]:
+    for offset in [(2, 2), (-2, 2), (2, -2), (-2, -2)]:
         draw.text((text_x + offset[0], text_y + offset[1]), text, fill="black", font=font)
     
     # Texto principal (branco com contorno preto)
-    draw.text((text_x, text_y), text, fill="white", font=font, stroke_width=2, stroke_fill="black")
+    draw.text((text_x, text_y), text, fill="white", font=font, stroke_width=3, stroke_fill="black")
     
     # Adicionar nomes dos usuários embaixo dos avatares
     try:
-        name_font = ImageFont.truetype("arial.ttf", 16)
+        name_font = ImageFont.truetype("arial.ttf", 18)
     except:
         name_font = ImageFont.load_default()
     
     # Nome do primeiro usuário
-    name1 = user1.display_name[:12] + "..." if len(user1.display_name) > 12 else user1.display_name
+    name1 = user1.display_name[:15] + "..." if len(user1.display_name) > 15 else user1.display_name
     name1_bbox = draw.textbbox((0, 0), name1, font=name_font)
     name1_width = name1_bbox[2] - name1_bbox[0]
-    draw.text((150 - name1_width//2, 260), name1, fill="white", font=name_font, stroke_width=1, stroke_fill="black")
+    draw.text((150 - name1_width//2, 270), name1, fill="white", font=name_font, stroke_width=2, stroke_fill="black")
     
     # Nome do segundo usuário
-    name2 = user2.display_name[:12] + "..." if len(user2.display_name) > 12 else user2.display_name
+    name2 = user2.display_name[:15] + "..." if len(user2.display_name) > 15 else user2.display_name
     name2_bbox = draw.textbbox((0, 0), name2, font=name_font)
     name2_width = name2_bbox[2] - name2_bbox[0]
-    draw.text((350 - name2_width//2, 260), name2, fill="white", font=name_font, stroke_width=1, stroke_fill="black")
+    draw.text((450 - name2_width//2, 270), name2, fill="white", font=name_font, stroke_width=2, stroke_fill="black")
 
     # Salvar em buffer
     buffer = io.BytesIO()
@@ -519,39 +535,55 @@ async def ship(ctx, user1: discord.Member = None, user2: discord.Member = None):
     avatar1 = avatar1.resize((200, 200), Image.LANCZOS)
     avatar2 = avatar2.resize((200, 200), Image.LANCZOS)
     
+    # Criar máscaras circulares para os avatares
+    mask = Image.new('L', (200, 200), 0)
+    draw_mask = ImageDraw.Draw(mask)
+    draw_mask.ellipse((0, 0, 200, 200), fill=255)
+    
+    avatar1_circle = Image.new('RGBA', (200, 200), (0, 0, 0, 0))
+    avatar1_circle.paste(avatar1, (0, 0), mask)
+    
+    avatar2_circle = Image.new('RGBA', (200, 200), (0, 0, 0, 0))
+    avatar2_circle.paste(avatar2, (0, 0), mask)
+    
     # Criar fundo maior
-    fundo = Image.new("RGBA", (500, 300), (255, 255, 255, 0))
+    fundo = Image.new("RGBA", (600, 300), (255, 255, 255, 0))
     
     # Colocar avatares nas laterais
-    fundo.paste(avatar1, (50, 50), avatar1)
-    fundo.paste(avatar2, (250, 50), avatar2)
+    fundo.paste(avatar1_circle, (50, 50), avatar1_circle)
+    fundo.paste(avatar2_circle, (350, 50), avatar2_circle)
     
-    # Desenhar coração no meio
+    # Carregar imagem do coração PNG
+    try:
+        # Tente carregar o coração dos arquivos do bot
+        coracao = Image.open("coração.png").convert("RGBA")
+    except FileNotFoundError:
+        # Se não encontrar, use um coração padrão (fallback)
+        coracao = Image.new("RGBA", (100, 100), (255, 0, 0, 0))
+        draw_coracao = ImageDraw.Draw(coracao)
+        draw_coracao.ellipse((0, 0, 50, 50), fill="red")
+        draw_coracao.ellipse((50, 0, 100, 50), fill="red")
+        draw_coracao.polygon([(0, 25), (100, 25), (50, 100)], fill="red")
+    
+    # Redimensionar o coração se necessário
+    coracao = coracao.resize((120, 120), Image.LANCZOS)
+    
+    # Posição do coração no meio
+    heart_x = 250
+    heart_y = 110
+    
+    # Colocar o coração no fundo
+    fundo.paste(coracao, (heart_x, heart_y), coracao)
+    
+    # Desenhar porcentagem no centro do coração
     draw = ImageDraw.Draw(fundo)
-    
-    # Posição do coração
-    heart_x = 225
-    heart_y = 150
-    
-    # Desenhar coração
-    heart_size = 60
-    # Parte esquerda do coração
-    draw.ellipse((heart_x - heart_size, heart_y - heart_size//2, 
-                 heart_x, heart_y + heart_size//2), fill="red", outline="white", width=3)
-    # Parte direita do coração
-    draw.ellipse((heart_x, heart_y - heart_size//2, 
-                 heart_x + heart_size, heart_y + heart_size//2), fill="red", outline="white", width=3)
-    # Parte inferior do coração (triângulo)
-    draw.polygon([(heart_x - heart_size, heart_y),
-                 (heart_x + heart_size, heart_y),
-                 (heart_x, heart_y + heart_size)], fill="red", outline="white", width=3)
     
     # Adicionar porcentagem em caixa alta no centro do coração
     try:
-        font = ImageFont.truetype("arialbd.ttf", 30)
+        font = ImageFont.truetype("arialbd.ttf", 35)
     except:
         try:
-            font = ImageFont.truetype("arial.ttf", 30)
+            font = ImageFont.truetype("arial.ttf", 35)
         except:
             font = ImageFont.load_default()
     
@@ -562,33 +594,33 @@ async def ship(ctx, user1: discord.Member = None, user2: discord.Member = None):
     text_height = text_bbox[3] - text_bbox[1]
     
     # Posicionar texto no centro do coração
-    text_x = heart_x - text_width // 2
-    text_y = heart_y - text_height // 2 - 5
+    text_x = heart_x + 60 - text_width // 2
+    text_y = heart_y + 60 - text_height // 2
     
     # Adicionar contorno ao texto
-    for offset in [(1, 1), (-1, 1), (1, -1), (-1, -1)]:
+    for offset in [(2, 2), (-2, 2), (2, -2), (-2, -2)]:
         draw.text((text_x + offset[0], text_y + offset[1]), text, fill="black", font=font)
     
     # Texto principal
-    draw.text((text_x, text_y), text, fill="white", font=font, stroke_width=2, stroke_fill="black")
+    draw.text((text_x, text_y), text, fill="white", font=font, stroke_width=3, stroke_fill="black")
     
     # Adicionar nomes dos usuários embaixo dos avatares
     try:
-        name_font = ImageFont.truetype("arial.ttf", 16)
+        name_font = ImageFont.truetype("arial.ttf", 18)
     except:
         name_font = ImageFont.load_default()
     
     # Nome do primeiro usuário
-    name1 = user1.display_name[:12] + "..." if len(user1.display_name) > 12 else user1.display_name
+    name1 = user1.display_name[:15] + "..." if len(user1.display_name) > 15 else user1.display_name
     name1_bbox = draw.textbbox((0, 0), name1, font=name_font)
     name1_width = name1_bbox[2] - name1_bbox[0]
-    draw.text((150 - name1_width//2, 260), name1, fill="white", font=name_font, stroke_width=1, stroke_fill="black")
+    draw.text((150 - name1_width//2, 270), name1, fill="white", font=name_font, stroke_width=2, stroke_fill="black")
     
     # Nome do segundo usuário
-    name2 = user2.display_name[:12] + "..." if len(user2.display_name) > 12 else user2.display_name
+    name2 = user2.display_name[:15] + "..." if len(user2.display_name) > 15 else user2.display_name
     name2_bbox = draw.textbbox((0, 0), name2, font=name_font)
     name2_width = name2_bbox[2] - name2_bbox[0]
-    draw.text((350 - name2_width//2, 260), name2, fill="white", font=name_font, stroke_width=1, stroke_fill="black")
+    draw.text((450 - name2_width//2, 270), name2, fill="white", font=name_font, stroke_width=2, stroke_fill="black")
 
     # Salvar em buffer
     buffer = io.BytesIO()
