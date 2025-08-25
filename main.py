@@ -223,32 +223,43 @@ async def on_guild_remove(guild):
         del MEME_CHANNELS[guild.id]
         print(f"Canal de memes removido para o servidor: {guild.name}")
 
-@bot.tree.command(name="memebomb", description="Envia vários memes de uma vez (máx 10) - Apenas você vê")
+@bot.tree.command(
+    name="memebomb",
+    description="Envia vários memes de uma vez (máx 10) - Apenas você vê"
+)
 @app_commands.describe(amount="Quantidade de memes para enviar")
 @app_commands.checks.has_permissions(manage_channels=True)
 async def meme_bomb_slash(interaction: discord.Interaction, amount: int = 5):
-    # Validar números negativos e zero
+    # Validar quantidade
     if amount <= 0:
-        await interaction.response.send_message("❌ A quantidade deve ser um número positivo maior que zero!", ephemeral=True)
+        await interaction.response.send_message(
+            "❌ A quantidade deve ser um número positivo maior que zero!", ephemeral=True
+        )
         return
     
     if amount > 10:
         amount = 10
-        await interaction.response.send_message("⚠️ Definido para o máximo de 10 memes!", ephemeral=True)
+        await interaction.response.send_message(
+            "⚠️ Definido para o máximo de 10 memes!", ephemeral=True
+        )
     else:
-        # Responder de forma ephemeral apenas se não foi respondido acima
-        await interaction.response.send_message(f" → Preparando {amount} memes para você...", ephemeral=True)
-    
-    # Enviar memes em modo ephemeral
-    for i in range(amount):
-        meme = await fetch_random_meme()
+        await interaction.response.send_message(
+            f"→ Preparando {amount} memes para você...", ephemeral=True
+        )
+
+    # Buscar memes em paralelo
+    tasks = [fetch_random_meme() for _ in range(amount)]
+    memes = await asyncio.gather(*tasks)
+
+    # Enviar embeds com pequena pausa
+    for i, meme in enumerate(memes):
         if meme:
             embed = discord.Embed(title=meme['title'], color=discord.Color.random())
             embed.set_image(url=meme['url'])
             embed.set_footer(text=f"Meme {i+1}/{amount} | r/{meme['subreddit']}")
             await interaction.followup.send(embed=embed, ephemeral=True)
-            await asyncio.sleep(1)  # Pequena pausa entre memes
-    
+            await asyncio.sleep(0.7)  # Pequena pausa entre mensagens para não perder embeds
+
 
 
 
