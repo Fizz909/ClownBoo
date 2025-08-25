@@ -955,6 +955,184 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
+# ---------------------- SNAKE ----------------------
+
+class SnakeView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.size = 5
+        self.snake = [(2, 2)]
+        self.direction = (0, 1)  # movimento inicial: direita
+        self.food = self.place_food()
+        self.board_message = None
+
+    def place_food(self):
+        while True:
+            pos = (random.randint(0, self.size-1), random.randint(0, self.size-1))
+            if pos not in self.snake:
+                return pos
+
+    def get_board(self):
+        board = ""
+        for y in range(self.size):
+            for x in range(self.size):
+                if (y, x) == self.snake[0]:
+                    board += "🟢"  # cabeça
+                elif (y, x) in self.snake:
+                    board += "🟩"  # corpo
+                elif (y, x) == self.food:
+                    board += "🍎"  # comida
+                else:
+                    board += "⬛"
+            board += "\n"
+        return board
+
+    async def update_board(self):
+        board = self.get_board()
+        embed = discord.Embed(title="SnakeBoo", description=board, color=0x00ff00)
+        if self.board_message:
+            await self.board_message.edit(embed=embed, view=self)
+        else:
+            return embed
+
+    def move_snake(self):
+        head = self.snake[0]
+        new_head = (head[0] + self.direction[0], head[1] + self.direction[1])
+
+        # verifica colisão
+        if (
+            new_head[0] < 0 or new_head[0] >= self.size
+            or new_head[1] < 0 or new_head[1] >= self.size
+            or new_head in self.snake
+        ):
+            return False  # fim de jogo
+
+        self.snake.insert(0, new_head)
+
+        if new_head == self.food:
+            self.food = self.place_food()  # comeu, gera nova comida
+        else:
+            self.snake.pop()  # remove cauda
+
+        return True
+
+    async def move_and_update(self, interaction):
+        alive = self.move_snake()
+        if alive:
+            await self.update_board()
+        else:
+            await interaction.response.edit_message(content="<:pd:1407523919283355882> Game Over!", embed=None, view=None)
+
+    # Botões de controle
+    @discord.ui.button(label="⬆️", style=discord.ButtonStyle.primary)
+    async def up(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.direction != (1, 0):
+            self.direction = (-1, 0)
+        await self.move_and_update(interaction)
+
+    @discord.ui.button(label="⬇️", style=discord.ButtonStyle.primary)
+    async def down(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.direction != (-1, 0):
+            self.direction = (1, 0)
+        await self.move_and_update(interaction)
+
+    @discord.ui.button(label="⬅️", style=discord.ButtonStyle.primary)
+    async def left(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.direction != (0, 1):
+            self.direction = (0, -1)
+        await self.move_and_update(interaction)
+
+    @discord.ui.button(label="➡️", style=discord.ButtonStyle.primary)
+    async def right(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.direction != (0, -1):
+            self.direction = (0, 1)
+        await self.move_and_update(interaction)
+
+# Prefix command
+@bot.command(name="snake")
+async def snake_prefix(ctx):
+    view = SnakeView()
+    embed = await view.update_board()
+    view.board_message = await ctx.send(embed=embed, view=view)
+
+# Slash command
+@bot.tree.command(name="snake", description="Jogue Snake no ClownBoo")
+async def snake_slash(interaction: discord.Interaction):
+    view = SnakeView()
+    embed = await view.update_board()
+    view.board_message = await interaction.response.send_message(embed=embed, view=view)
+    view.board_message = await interaction.original_respo
+
+# Arquivo para armazenar os canais de sugestão
+SUGGEST_FILE = "suggest_channels.json"
+
+# Funções para carregar e salvar os canais
+def load_suggest_channels():
+    if os.path.exists(SUGGEST_FILE):
+        with open(SUGGEST_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_suggest_channels(data):
+    with open(SUGGEST_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+# Carrega os canais ao iniciar
+guild_suggest_channels = load_suggest_channels()
+
+# ---------------------- SETSUGGESTLOG (Somente admin) ----------------------
+@bot.tree.command(name="setsuggestlog", description="Define o canal onde sugestões serão enviadas (somente admins)")
+@app_commands.describe(channel="Canal para enviar as sugestões")
+async def setsuggestlog(interaction: discord.Interaction, channel: discord.TextChannel):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message(
+            "<:pd:1407523919283355882> Apenas administradores podem usar este comando!", ephemeral=True
+        )
+        return
+
+    guild_suggest_channels[str(interaction.guild.id)] = channel.id
+    save_suggest_channels(guild_suggest_channels)
+    await interaction.response.send_message(
+        f"<a:pd2:1407524312923246632> Canal de sugestões definido para {channel.mention}", ephemeral=True
+    )
+
+# ---------------------- SUGGEST ----------------------
+@bot.tree.command(name="suggest", description="Envie uma sugestão para o servidor")
+@app_commands.describe(suggestion="Sua sugestão")
+async def suggest_slash(interaction: discord.Interaction, suggestion: str):
+    guild_id = str(interaction.guild.id)
+    if guild_id not in guild_suggest_channels:
+        await interaction.response.send_message(
+            "<:pd:1407523919283355882> Nenhum canal de sugestões definido! Use `/setsuggestlog` primeiro.", ephemeral=True
+        )
+        return
+
+    channel_id = guild_suggest_channels[guild_id]
+    channel = interaction.guild.get_channel(channel_id)
+    if not channel:
+        await interaction.response.send_message(
+            "<:pd:1407523919283355882> Canal de sugestões não encontrado! Defina outro com `/setsuggestlog`.", ephemeral=True
+        )
+        return
+
+    embed = discord.Embed(
+        title="<a:pd2:1407524312923246632> Nova Sugestão",
+        description=suggestion,
+        color=0x00ff00
+    )
+    embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.avatar.url)
+    msg = await channel.send(embed=embed)
+    await msg.add_reaction("👍")
+    await msg.add_reaction("👎")
+
+    ephemeral_embed = discord.Embed(
+        title="→ Sugestão enviada!",
+        description=f"Sua sugestão foi enviada para {channel.mention}",
+        color=0x00ff00
+    )
+    await interaction.response.send_message(embed=ephemeral_embed, ephemeral=True)
+
+
 # -------------------- CRÉDITOS --------------------
 @bot.tree.command(name="creditos", description="Mostra os créditos do ClownBoo")
 async def creditos_slash(interaction: discord.Interaction):
