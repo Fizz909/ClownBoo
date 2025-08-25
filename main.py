@@ -4,6 +4,7 @@ from discord import app_commands
 import aiohttp
 import asyncio
 import random
+from typing import Dict
 import json
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -350,61 +351,153 @@ async def memeroulette(ctx):
 @app_commands.describe(user1="Primeiro usuário", user2="Segundo usuário")
 async def ship_slash(interaction: discord.Interaction, user1: discord.Member, user2: discord.Member):
     await interaction.response.defer()
+    
+    # Verificar se são o mesmo usuário
+    if user1.id == user2.id:
+        embed = discord.Embed(
+            title="❌ Erro",
+            description="Você não pode shippar a mesma pessoa duas vezes!",
+            color=discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed)
+        return
 
     # Gerar porcentagem de compatibilidade
     porcentagem = random.randint(0, 100)
-
-    # Baixar avatares dos usuários
+    
     async with aiohttp.ClientSession() as session:
         async with session.get(str(user1.display_avatar.url)) as resp1:
             avatar1_bytes = await resp1.read()
         async with session.get(str(user2.display_avatar.url)) as resp2:
             avatar2_bytes = await resp2.read()
 
-    # Abrir imagens com Pillow
-    avatar1 = Image.open(io.BytesIO(avatar1_bytes)).convert("RGBA").resize((128, 128))
-    avatar2 = Image.open(io.BytesIO(avatar2_bytes)).convert("RGBA").resize((128, 128))
-
-    # Criar fundo
-    fundo = Image.new("RGBA", (300, 150), (255, 255, 255, 0))
-    fundo.paste(avatar1, (20, 10), avatar1)
-    fundo.paste(avatar2, (150, 10), avatar2)
-
-    # Desenhar coração e porcentagem
+    # Processar avatares
+    avatar1 = Image.open(io.BytesIO(avatar1_bytes)).convert("RGBA")
+    avatar2 = Image.open(io.BytesIO(avatar2_bytes)).convert("RGBA")
+    
+    # Redimensionar para tamanhos maiores
+    avatar1 = avatar1.resize((200, 200), Image.LANCZOS)
+    avatar2 = avatar2.resize((200, 200), Image.LANCZOS)
+    
+    # Criar fundo maior
+    fundo = Image.new("RGBA", (500, 300), (255, 255, 255, 0))
+    
+    # Colocar avatares nas laterais
+    fundo.paste(avatar1, (50, 50), avatar1)
+    fundo.paste(avatar2, (250, 50), avatar2)
+    
+    # Desenhar coração no meio
     draw = ImageDraw.Draw(fundo)
+    
+    # Posição do coração
+    heart_x = 225
+    heart_y = 150
+    
+    # Desenhar coração
+    heart_size = 60
+    # Parte esquerda do coração
+    draw.ellipse((heart_x - heart_size, heart_y - heart_size//2, 
+                 heart_x, heart_y + heart_size//2), fill="red", outline="white", width=3)
+    # Parte direita do coração
+    draw.ellipse((heart_x, heart_y - heart_size//2, 
+                 heart_x + heart_size, heart_y + heart_size//2), fill="red", outline="white", width=3)
+    # Parte inferior do coração (triângulo)
+    draw.polygon([(heart_x - heart_size, heart_y),
+                 (heart_x + heart_size, heart_y),
+                 (heart_x, heart_y + heart_size)], fill="red", outline="white", width=3)
+    
+    # Adicionar porcentagem em caixa alta no centro do coração
     try:
-        font = ImageFont.truetype("arial.ttf", 25)
+        font = ImageFont.truetype("arialbd.ttf", 30)  # Fonte em negrito
     except:
-        font = ImageFont.load_default()
-    draw.text((110, 60), f"💖 {porcentagem}%", fill="red", font=font)
+        try:
+            font = ImageFont.truetype("arial.ttf", 30)
+        except:
+            font = ImageFont.load_default()
+    
+    # Texto da porcentagem
+    text = f"{porcentagem}%"
+    text_bbox = draw.textbbox((0, 0), text, font=font)
+    text_width = text_bbox[2] - text_bbox[0]
+    text_height = text_bbox[3] - text_bbox[1]
+    
+    # Posicionar texto no centro do coração
+    text_x = heart_x - text_width // 2
+    text_y = heart_y - text_height // 2 - 5
+    
+    # Adicionar contorno ao texto
+    for offset in [(1, 1), (-1, 1), (1, -1), (-1, -1)]:
+        draw.text((text_x + offset[0], text_y + offset[1]), text, fill="black", font=font)
+    
+    # Texto principal (branco com contorno preto)
+    draw.text((text_x, text_y), text, fill="white", font=font, stroke_width=2, stroke_fill="black")
+    
+    # Adicionar nomes dos usuários embaixo dos avatares
+    try:
+        name_font = ImageFont.truetype("arial.ttf", 16)
+    except:
+        name_font = ImageFont.load_default()
+    
+    # Nome do primeiro usuário
+    name1 = user1.display_name[:12] + "..." if len(user1.display_name) > 12 else user1.display_name
+    name1_bbox = draw.textbbox((0, 0), name1, font=name_font)
+    name1_width = name1_bbox[2] - name1_bbox[0]
+    draw.text((150 - name1_width//2, 260), name1, fill="white", font=name_font, stroke_width=1, stroke_fill="black")
+    
+    # Nome do segundo usuário
+    name2 = user2.display_name[:12] + "..." if len(user2.display_name) > 12 else user2.display_name
+    name2_bbox = draw.textbbox((0, 0), name2, font=name_font)
+    name2_width = name2_bbox[2] - name2_bbox[0]
+    draw.text((350 - name2_width//2, 260), name2, fill="white", font=name_font, stroke_width=1, stroke_fill="black")
 
     # Salvar em buffer
     buffer = io.BytesIO()
     fundo.save(buffer, format="PNG")
     buffer.seek(0)
 
-    # Enviar embed com a imagem
     embed = discord.Embed(
-        title="💖 Ship do Dia 💖",
-        description=f"{user1.mention} + {user2.mention} = **{porcentagem}% compatíveis!**",
+        title="💖 SHIP PERFEITO 💖",
+        description=f"**{user1.mention}** + **{user2.mention}** = **{porcentagem}%** de compatibilidade!",
         color=0xff69b4
     )
+    
+    # Mensagem personalizada baseada na porcentagem
+    if porcentagem >= 90:
+        message = "💕 **CASEM-SE JÁ!** 💕"
+    elif porcentagem >= 70:
+        message = "❤️ **Par perfeito!** ❤️"
+    elif porcentagem >= 50:
+        message = "💖 **Há uma química!** 💖"
+    elif porcentagem >= 30:
+        message = "🤔 **Talvez funcione...** 🤔"
+    else:
+        message = "💔 **Melhor continuar amigos** 💔"
+    
+    embed.add_field(name="💭 Resultado", value=message, inline=False)
+    
     file = discord.File(fp=buffer, filename="ship.png")
     embed.set_image(url="attachment://ship.png")
-    embed.set_thumbnail(url=user1.display_avatar.url)
-    embed.set_footer(text=f"Shipper: {user2.display_name}", icon_url=user2.display_avatar.url)
+    embed.set_footer(text=f"Shipper: {interaction.user.display_name}", icon_url=interaction.user.display_avatar.url)
 
     await interaction.followup.send(file=file, embed=embed)
 
 @bot.command()
 async def ship(ctx, user1: discord.Member = None, user2: discord.Member = None):
+    # Se apenas um usuário for mencionado
+    if user1 is not None and user2 is None:
+        if user1.id == ctx.author.id:
+            await ctx.send("❌ Você precisa mencionar pelo menos um outro usuário!")
+            return
+        user2 = user1
+        user1 = ctx.author
+    
     # Verificar se os dois usuários foram mencionados
     if user1 is None or user2 is None:
         await ctx.send("❌ Você precisa mencionar dois usuários! Exemplo: `&ship @usuário1 @usuário2`")
         return
     
     # Verificar se não está tentando shippar consigo mesmo
-    if user1 == user2:
+    if user1.id == user2.id:
         await ctx.send("❌ Você não pode shippar alguém consigo mesmo! Tente com outro usuário.")
         return
     
@@ -418,45 +511,193 @@ async def ship(ctx, user1: discord.Member = None, user2: discord.Member = None):
         async with session.get(str(user2.display_avatar.url)) as resp2:
             avatar2_bytes = await resp2.read()
 
-    # Abrir imagens com Pillow
-    avatar1 = Image.open(io.BytesIO(avatar1_bytes)).convert("RGBA").resize((128, 128))
-    avatar2 = Image.open(io.BytesIO(avatar2_bytes)).convert("RGBA").resize((128, 128))
-
-    # Criar fundo
-    fundo = Image.new("RGBA", (300, 150), (255, 255, 255, 0))
-    fundo.paste(avatar1, (20, 10), avatar1)
-    fundo.paste(avatar2, (150, 10), avatar2)
-
-    # Desenhar coração e porcentagem
+    # Processar avatares
+    avatar1 = Image.open(io.BytesIO(avatar1_bytes)).convert("RGBA")
+    avatar2 = Image.open(io.BytesIO(avatar2_bytes)).convert("RGBA")
+    
+    # Redimensionar para tamanhos maiores
+    avatar1 = avatar1.resize((200, 200), Image.LANCZOS)
+    avatar2 = avatar2.resize((200, 200), Image.LANCZOS)
+    
+    # Criar fundo maior
+    fundo = Image.new("RGBA", (500, 300), (255, 255, 255, 0))
+    
+    # Colocar avatares nas laterais
+    fundo.paste(avatar1, (50, 50), avatar1)
+    fundo.paste(avatar2, (250, 50), avatar2)
+    
+    # Desenhar coração no meio
     draw = ImageDraw.Draw(fundo)
+    
+    # Posição do coração
+    heart_x = 225
+    heart_y = 150
+    
+    # Desenhar coração
+    heart_size = 60
+    # Parte esquerda do coração
+    draw.ellipse((heart_x - heart_size, heart_y - heart_size//2, 
+                 heart_x, heart_y + heart_size//2), fill="red", outline="white", width=3)
+    # Parte direita do coração
+    draw.ellipse((heart_x, heart_y - heart_size//2, 
+                 heart_x + heart_size, heart_y + heart_size//2), fill="red", outline="white", width=3)
+    # Parte inferior do coração (triângulo)
+    draw.polygon([(heart_x - heart_size, heart_y),
+                 (heart_x + heart_size, heart_y),
+                 (heart_x, heart_y + heart_size)], fill="red", outline="white", width=3)
+    
+    # Adicionar porcentagem em caixa alta no centro do coração
     try:
-        font = ImageFont.truetype("arial.ttf", 25)
+        font = ImageFont.truetype("arialbd.ttf", 30)
     except:
-        font = ImageFont.load_default()
-    draw.text((110, 60), f"💖 {porcentagem}%", fill="red", font=font)
+        try:
+            font = ImageFont.truetype("arial.ttf", 30)
+        except:
+            font = ImageFont.load_default()
+    
+    # Texto da porcentagem
+    text = f"{porcentagem}%"
+    text_bbox = draw.textbbox((0, 0), text, font=font)
+    text_width = text_bbox[2] - text_bbox[0]
+    text_height = text_bbox[3] - text_bbox[1]
+    
+    # Posicionar texto no centro do coração
+    text_x = heart_x - text_width // 2
+    text_y = heart_y - text_height // 2 - 5
+    
+    # Adicionar contorno ao texto
+    for offset in [(1, 1), (-1, 1), (1, -1), (-1, -1)]:
+        draw.text((text_x + offset[0], text_y + offset[1]), text, fill="black", font=font)
+    
+    # Texto principal
+    draw.text((text_x, text_y), text, fill="white", font=font, stroke_width=2, stroke_fill="black")
+    
+    # Adicionar nomes dos usuários embaixo dos avatares
+    try:
+        name_font = ImageFont.truetype("arial.ttf", 16)
+    except:
+        name_font = ImageFont.load_default()
+    
+    # Nome do primeiro usuário
+    name1 = user1.display_name[:12] + "..." if len(user1.display_name) > 12 else user1.display_name
+    name1_bbox = draw.textbbox((0, 0), name1, font=name_font)
+    name1_width = name1_bbox[2] - name1_bbox[0]
+    draw.text((150 - name1_width//2, 260), name1, fill="white", font=name_font, stroke_width=1, stroke_fill="black")
+    
+    # Nome do segundo usuário
+    name2 = user2.display_name[:12] + "..." if len(user2.display_name) > 12 else user2.display_name
+    name2_bbox = draw.textbbox((0, 0), name2, font=name_font)
+    name2_width = name2_bbox[2] - name2_bbox[0]
+    draw.text((350 - name2_width//2, 260), name2, fill="white", font=name_font, stroke_width=1, stroke_fill="black")
 
     # Salvar em buffer
     buffer = io.BytesIO()
     fundo.save(buffer, format="PNG")
     buffer.seek(0)
 
-    # Enviar embed com a imagem
     embed = discord.Embed(
-        title="💖 Ship do Dia 💖",
-        description=f"{user1.mention} + {user2.mention} = **{porcentagem}% compatíveis!**",
+        title="💖 SHIP PERFEITO 💖",
+        description=f"**{user1.mention}** + **{user2.mention}** = **{porcentagem}%** de compatibilidade!",
         color=0xff69b4
     )
+    
+    # Mensagem personalizada baseada na porcentagem
+    if porcentagem >= 90:
+        message = "💕 **CASEM-SE JÁ!** 💕"
+    elif porcentagem >= 70:
+        message = "❤️ **Par perfeito!** ❤️"
+    elif porcentagem >= 50:
+        message = "💖 **Há uma química!** 💖"
+    elif porcentagem >= 30:
+        message = "🤔 **Talvez funcione...** 🤔"
+    else:
+        message = "💔 **Melhor continuar amigos** 💔"
+    
+    embed.add_field(name="💭 Resultado", value=message, inline=False)
+    
     file = discord.File(fp=buffer, filename="ship.png")
     embed.set_image(url="attachment://ship.png")
-    embed.set_thumbnail(url=user1.display_avatar.url)
-    embed.set_footer(text=f"Shipper: {user2.display_name}", icon_url=user2.display_avatar.url)
+    embed.set_footer(text=f"Shipper: {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
 
     await ctx.send(file=file, embed=embed)
 
+#-----TRIVIA---
+
+import discord
+from discord import app_commands
+from discord.ext import commands
+import aiohttp
+import asyncio
+import random
+from typing import Dict
+
+# Dicionário para controlar trivias ativas
+trivias_ativas: Dict[int, bool] = {}
+MAX_TRIVIAS_SIMULTANEAS = 2
+
+class TriviaView(discord.ui.View):
+    def __init__(self, opcoes: list, resposta_correta: str, timeout: float = 30.0):
+        super().__init__(timeout=timeout)
+        self.opcoes = opcoes
+        self.resposta_correta = resposta_correta
+        self.resposta_usuario = None
+        self.correta = False
+        
+        # Criar botões para cada opção
+        for i, opcao in enumerate(opcoes):
+            self.add_item(TriviaButton(opcao, i, resposta_correta))
+
+class TriviaButton(discord.ui.Button):
+    def __init__(self, opcao: str, index: int, resposta_correta: str):
+        super().__init__(
+            label=f"Opção {index + 1}",
+            style=discord.ButtonStyle.primary,
+            custom_id=f"trivia_{index}"
+        )
+        self.opcao = opcao
+        self.index = index
+        self.resposta_correta = resposta_correta
+
+    async def callback(self, interaction: discord.Interaction):
+        # Desabilitar todos os botões
+        for item in self.view.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+                if item.custom_id == f"trivia_{self.index}":
+                    if self.opcao == self.resposta_correta:
+                        item.style = discord.ButtonStyle.success
+                        self.view.correta = True
+                    else:
+                        item.style = discord.ButtonStyle.danger
+        
+        self.view.resposta_usuario = self.opcao
+        self.view.stop()
+        
+        embed = interaction.message.embeds[0]
+        if self.opcao == self.resposta_correta:
+            embed.color = discord.Color.green()
+            embed.set_footer(text="<a:pd2:1407524312923246632> Resposta correta!")
+        else:
+            embed.color = discord.Color.red()
+            embed.set_footer(text=f"<:pd:1407523919283355882> Resposta correta: {self.resposta_correta}")
+        
+        await interaction.response.edit_message(embed=embed, view=self.view)
 
 @bot.tree.command(name="trivia", description="Jogo de perguntas e respostas em português")
 @app_commands.describe(perguntas="Número de perguntas (padrão: 3)")
 async def trivia_slash(interaction: discord.Interaction, perguntas: int = 3):
+    # Verificar limite de trivias simultâneas
+    trivias_ativas_count = sum(1 for active in trivias_ativas.values() if active)
+    if trivias_ativas_count >= MAX_TRIVIAS_SIMULTANEAS:
+        await interaction.response.send_message(
+            f"❌ Limite de {MAX_TRIVIAS_SIMULTANEAS} trivias simultâneas atingido. Tente novamente em alguns instantes.",
+            ephemeral=True
+        )
+        return
+    
+    # Registrar trivia ativa
+    trivias_ativas[interaction.user.id] = True
+    
     if perguntas > 10:
         perguntas = 10
         await interaction.response.send_message("Máximo de 10 perguntas definido.", ephemeral=True)
@@ -465,105 +706,230 @@ async def trivia_slash(interaction: discord.Interaction, perguntas: int = 3):
     await interaction.response.defer()
     
     pontuacao = 0
-    async with aiohttp.ClientSession() as session:
-        for i in range(perguntas):
-            url = "https://opentdb.com/api.php?amount=1&type=multiple&category=9&lang=pt"
-            async with session.get(url) as resp:
-                data = await resp.json()
-                if data["response_code"] != 0:
-                    await interaction.followup.send("Não consegui buscar perguntas da API...")
-                    return
-                q = data["results"][0]
-                pergunta = html.unescape(q["question"])
-                opcoes = [html.unescape(ans) for ans in q["incorrect_answers"]] + [html.unescape(q["correct_answer"])]
-                random.shuffle(opcoes)
-                resposta_correta = html.unescape(q["correct_answer"])
-                
-                # Criar embed para a pergunta
-                embed = discord.Embed(
-                    title=f"Pregunta {i+1}/{perguntas}",
-                    description=pergunta,
-                    color=discord.Color.blue()
-                )
-                
-                # Adicionar opções
-                for idx, opt in enumerate(opcoes):
-                    embed.add_field(name=f"Opção {idx+1}", value=opt, inline=False)
-                
-                embed.set_footer(text="Responda com o número da opção (1-4)")
-                
-                await interaction.followup.send(embed=embed)
-
-                def check(m): 
-                    return m.author == interaction.user and m.channel == interaction.channel and m.content.isdigit() and 1 <= int(m.content) <= 4
-                
-                try:
-                    msg = await bot.wait_for("message", check=check, timeout=30.0)
-                    escolha = int(msg.content) - 1
-                    
-                    if opcoes[escolha] == resposta_correta:
-                        await interaction.followup.send("✅ Acertou!")
-                        pontuacao += 1
-                    else:
-                        await interaction.followup.send(f"❌ Errou! A resposta correta era: **{resposta_correta}**")
-                except asyncio.TimeoutError:
-                    await interaction.followup.send(f"⏰ Tempo esgotado! A resposta correta era: **{resposta_correta}**")
+    resultados = []
     
-    await interaction.followup.send(f"🏆 **Pontuação final: {pontuacao}/{perguntas}**")
+    try:
+        for i in range(perguntas):
+            # Usar API brasileira de quiz
+            url = "https://quiz-api-bwi5hjqyaq-uc.a.run.app/question?limit=1"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as resp:
+                    if resp.status != 200:
+                        await interaction.followup.send("<:pd:1407523919283355882> Erro ao buscar perguntas da API brasileira.")
+                        break
+                    
+                    data = await resp.json()
+                    if not data:
+                        await interaction.followup.send("<:pd:1407523919283355882> Nenhuma pergunta disponível na API.")
+                        break
+                    
+                    pergunta_data = data[0]
+                    pergunta = pergunta_data["question"]
+                    resposta_correta = pergunta_data["answer"]
+                    opcoes = pergunta_data["options"]
+                    
+                    # Embaralhar opções
+                    random.shuffle(opcoes)
+                    
+                    # Criar embed para a pergunta
+                    embed = discord.Embed(
+                        title=f"📚 Pergunta {i+1}/{perguntas}",
+                        description=f"**{pergunta}**",
+                        color=discord.Color.blue()
+                    )
+                    
+                    # Adicionar opções
+                    for idx, opt in enumerate(opcoes):
+                        embed.add_field(
+                            name=f"🔹 Opção {idx+1}",
+                            value=opt,
+                            inline=False
+                        )
+                    
+                    embed.set_footer(text="Clique em um botão para responder!")
+                    
+                    # Criar view com botões
+                    view = TriviaView(opcoes, resposta_correta)
+                    
+                    # Enviar pergunta com botões
+                    await interaction.followup.send(embed=embed, view=view)
+                    
+                    # Esperar resposta
+                    timed_out = await view.wait()
+                    
+                    if timed_out:
+                        await interaction.followup.send(
+                            f"⏰ Tempo esgotado! A resposta correta era: **{resposta_correta}**"
+                        )
+                        resultados.append(f"❌ Pergunta {i+1}: Tempo esgotado")
+                    else:
+                        if view.correta:
+                            await interaction.followup.send("✅ **Acertou!** <a:pd2:1407524312923246632>")
+                            pontuacao += 1
+                            resultados.append(f"<a:pd2:1407524312923246632> Pergunta {i+1}: Acertou")
+                        else:
+                            await interaction.followup.send(
+                                f"<:pd:1407523919283355882> **Errou!** A resposta correta era: **{resposta_correta}**"
+                            )
+                            resultados.append(f"<:pd:1407523919283355882> Pergunta {i+1}: Errou")
+            
+            # Pequena pausa entre perguntas
+            await asyncio.sleep(1)
+            
+    except Exception as e:
+        await interaction.followup.send(f"<:pd:1407523919283355882> Ocorreu um erro: {str(e)}")
+    
+    finally:
+        # Remover trivia ativa
+        trivias_ativas.pop(interaction.user.id, None)
+    
+    # Enviar resultado final
+    resultado_final = discord.Embed(
+        title="<:pd3:1407525193487749240> **Resultado Final** <:pd3:1407525193487749240>",
+        description=f"**Pontuação: {pontuacao}/{perguntas}**",
+        color=discord.Color.gold()
+    )
+    
+    if pontuacao == perguntas:
+        resultado_final.add_field(name="🎯 Desempenho", value="**PERFEITO!** 🌟", inline=False)
+    elif pontuacao >= perguntas * 0.7:
+        resultado_final.add_field(name="🎯 Desempenho", value="**Excelente!** 💪", inline=False)
+    elif pontuacao >= perguntas * 0.5:
+        resultado_final.add_field(name="🎯 Desempenho", value="**Bom!** 👍", inline=False)
+    else:
+        resultado_final.add_field(name="🎯 Desempenho", value="**Pode melhorar!** 📚", inline=False)
+    
+    resultado_final.add_field(
+        name="📊 Detalhes",
+        value="\n".join(resultados) if resultados else "Nenhum resultado",
+        inline=False
+    )
+    
+    resultado_final.set_footer(text="Obrigado por jogar! <:pd3:1407525193487749240>")
+    
+    await interaction.followup.send(embed=resultado_final)
 
 @bot.command()
 async def trivia(ctx, perguntas: int = 3):
+    # Verificar limite de trivias simultâneas
+    trivias_ativas_count = sum(1 for active in trivias_ativas.values() if active)
+    if trivias_ativas_count >= MAX_TRIVIAS_SIMULTANEAS:
+        await ctx.send(
+            f"❌ Limite de {MAX_TRIVIAS_SIMULTANEAS} trivias simultâneas atingido. Tente novamente em alguns instantes."
+        )
+        return
+    
+    # Registrar trivia ativa
+    trivias_ativas[ctx.author.id] = True
+    
     if perguntas > 10:
         perguntas = 10
         await ctx.send("Máximo de 10 perguntas definido.")
         return
     
     pontuacao = 0
-    async with aiohttp.ClientSession() as session:
-        for i in range(perguntas):
-            url = "https://opentdb.com/api.php?amount=1&type=multiple&category=9&lang=pt"
-            async with session.get(url) as resp:
-                data = await resp.json()
-                if data["response_code"] != 0:
-                    await ctx.send("Não consegui buscar perguntas da API...")
-                    return
-                q = data["results"][0]
-                pergunta = html.unescape(q["question"])
-                opcoes = [html.unescape(ans) for ans in q["incorrect_answers"]] + [html.unescape(q["correct_answer"])]
-                random.shuffle(opcoes)
-                resposta_correta = html.unescape(q["correct_answer"])
-                
-                # Criar embed para a pergunta
-                embed = discord.Embed(
-                    title=f"Pergunta {i+1}/{perguntas}",
-                    description=pergunta,
-                    color=discord.Color.blue()
-                )
-                
-                # Adicionar opções
-                for idx, opt in enumerate(opcoes):
-                    embed.add_field(name=f"Opção {idx+1}", value=opt, inline=False)
-                
-                embed.set_footer(text="Responda com o número da opção (1-4)")
-                
-                await ctx.send(embed=embed)
-
-                def check(m): 
-                    return m.author == ctx.author and m.channel == ctx.channel and m.content.isdigit() and 1 <= int(m.content) <= 4
-                
-                try:
-                    msg = await bot.wait_for("message", check=check, timeout=30.0)
-                    escolha = int(msg.content) - 1
-                    
-                    if opcoes[escolha] == resposta_correta:
-                        await ctx.send("✅ Acertou!")
-                        pontuacao += 1
-                    else:
-                        await ctx.send(f"❌ Errou! A resposta correta era: **{resposta_correta}**")
-                except asyncio.TimeoutError:
-                    await ctx.send(f"⏰ Tempo esgotado! A resposta correta era: **{resposta_correta}**")
+    resultados = []
     
-    await ctx.send(f"🏆 **Pontuação final: {pontuacao}/{perguntas}**")
+    try:
+        for i in range(perguntas):
+            # Usar API brasileira de quiz
+            url = "https://quiz-api-bwi5hjqyaq-uc.a.run.app/question?limit=1"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as resp:
+                    if resp.status != 200:
+                        await ctx.send("❌ Erro ao buscar perguntas na API")
+                        break
+                    
+                    data = await resp.json()
+                    if not data:
+                        await ctx.send("❌ Nenhuma pergunta disponível na API.")
+                        break
+                    
+                    pergunta_data = data[0]
+                    pergunta = pergunta_data["question"]
+                    resposta_correta = pergunta_data["answer"]
+                    opcoes = pergunta_data["options"]
+                    
+                    # Embaralhar opções
+                    random.shuffle(opcoes)
+                    
+                    # Criar embed para a pergunta
+                    embed = discord.Embed(
+                        title=f"📚 Pergunta {i+1}/{perguntas}",
+                        description=f"**{pergunta}**",
+                        color=discord.Color.blue()
+                    )
+                    
+                    # Adicionar opções
+                    for idx, opt in enumerate(opcoes):
+                        embed.add_field(
+                            name=f"🔹 Opção {idx+1}",
+                            value=opt,
+                            inline=False
+                        )
+                    
+                    embed.set_footer(text="Clique em um botão para responder!")
+                    
+                    # Criar view com botões
+                    view = TriviaView(opcoes, resposta_correta)
+                    
+                    # Enviar pergunta com botões
+                    msg = await ctx.send(embed=embed, view=view)
+                    
+                    # Esperar resposta
+                    timed_out = await view.wait()
+                    
+                    if timed_out:
+                        await ctx.send(
+                            f"⏰ Tempo esgotado! A resposta correta era: **{resposta_correta}**"
+                        )
+                        resultados.append(f"❌ Pergunta {i+1}: Tempo esgotado")
+                    else:
+                        if view.correta:
+                            await ctx.send("✅ **Acertou!** 🎉")
+                            pontuacao += 1
+                            resultados.append(f"✅ Pergunta {i+1}: Acertou")
+                        else:
+                            await ctx.send(
+                                f"<:pd:1407523919283355882> **Errou!** A resposta correta era: **{resposta_correta}**"
+                            )
+                            resultados.append(f"<:pd:1407523919283355882> Pergunta {i+1}: Errou")
+            
+            # Pequena pausa entre perguntas
+            await asyncio.sleep(1)
+            
+    except Exception as e:
+        await ctx.send(f"<:pd:1407523919283355882> Ocorreu um erro: {str(e)}")
+    
+    finally:
+        # Remover trivia ativa
+        trivias_ativas.pop(ctx.author.id, None)
+    
+    # Enviar resultado final
+    resultado_final = discord.Embed(
+        title="<a:pd2:1407524312923246632> **Resultado Final** <a:pd2:1407524312923246632>",
+        description=f"**Pontuação: {pontuacao}/{perguntas}**",
+        color=discord.Color.gold()
+    )
+    
+    if pontuacao == perguntas:
+        resultado_final.add_field(name="🎯 Desempenho", value="**PERFEITO!** 🌟", inline=False)
+    elif pontuacao >= perguntas * 0.7:
+        resultado_final.add_field(name="🎯 Desempenho", value="**Excelente!** 💪", inline=False)
+    elif pontuacao >= perguntas * 0.5:
+        resultado_final.add_field(name="🎯 Desempenho", value="**Bom!** 👍", inline=False)
+    else:
+        resultado_final.add_field(name="🎯 Desempenho", value="**Pode melhorar!** 📚", inline=False)
+    
+    resultado_final.add_field(
+        name="📊 Detalhes",
+        value="\n".join(resultados) if resultados else "Nenhum resultado",
+        inline=False
+    )
+    
+    resultado_final.set_footer(text="Obrigado por jogar! <:pd3:1407525193487749240>")
+    
+    await ctx.send(embed=resultado_final)
 
 @bot.tree.command(name="randomgif", description="Envia um GIF aleatório")
 @app_commands.describe(termo="Termo para buscar o GIF")
