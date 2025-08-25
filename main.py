@@ -715,6 +715,58 @@ class TriviaButton(discord.ui.Button):
         
         await interaction.response.edit_message(embed=embed, view=self.view)
 
+# Dicionário para controlar trivias ativas
+trivias_ativas: Dict[int, bool] = {}
+MAX_TRIVIAS_SIMULTANEAS = 2
+
+class TriviaView(discord.ui.View):
+    def __init__(self, opcoes: list, resposta_correta: str, timeout: float = 30.0):
+        super().__init__(timeout=timeout)
+        self.opcoes = opcoes
+        self.resposta_correta = resposta_correta
+        self.resposta_usuario = None
+        self.correta = False
+        
+        # Criar botões para cada opção
+        for i, opcao in enumerate(opcoes):
+            self.add_item(TriviaButton(opcao, i, resposta_correta))
+
+class TriviaButton(discord.ui.Button):
+    def __init__(self, opcao: str, index: int, resposta_correta: str):
+        super().__init__(
+            label=f"Opção {index + 1}",
+            style=discord.ButtonStyle.primary,
+            custom_id=f"trivia_{index}"
+        )
+        self.opcao = opcao
+        self.index = index
+        self.resposta_correta = resposta_correta
+
+    async def callback(self, interaction: discord.Interaction):
+        # Desabilitar todos os botões
+        for item in self.view.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+                if item.custom_id == f"trivia_{self.index}":
+                    if self.opcao == self.resposta_correta:
+                        item.style = discord.ButtonStyle.success
+                        self.view.correta = True
+                    else:
+                        item.style = discord.ButtonStyle.danger
+        
+        self.view.resposta_usuario = self.opcao
+        self.view.stop()
+        
+        embed = interaction.message.embeds[0]
+        if self.opcao == self.resposta_correta:
+            embed.color = discord.Color.green()
+            embed.set_footer(text="✅ Resposta correta!")
+        else:
+            embed.color = discord.Color.red()
+            embed.set_footer(text=f"❌ Resposta correta: {self.resposta_correta}")
+        
+        await interaction.response.edit_message(embed=embed, view=self.view)
+
 @bot.tree.command(name="trivia", description="Jogo de perguntas e respostas em português")
 @app_commands.describe(perguntas="Número de perguntas (padrão: 3)")
 async def trivia_slash(interaction: discord.Interaction, perguntas: int = 3):
@@ -869,12 +921,12 @@ async def trivia(ctx, perguntas: int = 3):
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as resp:
                     if resp.status != 200:
-                        await ctx.send("❌ Erro ao buscar perguntas na API")
+                        await ctx.send("<:pd:1407523919283355882> Erro ao buscar perguntas na API")
                         break
                     
                     data = await resp.json()
                     if not data:
-                        await ctx.send("❌ Nenhuma pergunta disponível na API.")
+                        await ctx.send("<:pd:1407523919283355882> Nenhuma pergunta disponível na API.")
                         break
                     
                     pergunta_data = data[0]
@@ -918,9 +970,9 @@ async def trivia(ctx, perguntas: int = 3):
                         resultados.append(f"❌ Pergunta {i+1}: Tempo esgotado")
                     else:
                         if view.correta:
-                            await ctx.send("✅ **Acertou!** 🎉")
+                            await ctx.send("✅ **Acertou!** <a:pd2:1407524312923246632>")
                             pontuacao += 1
-                            resultados.append(f"✅ Pergunta {i+1}: Acertou")
+                            resultados.append(f"<a:pd2:1407524312923246632> Pergunta {i+1}: Acertou")
                         else:
                             await ctx.send(
                                 f"<:pd:1407523919283355882> **Errou!** A resposta correta era: **{resposta_correta}**"
@@ -1035,40 +1087,6 @@ async def piada(ctx):
     except Exception as e:
         print(f"Erro ao buscar piada: {e}")
         await ctx.send("Ocorreu um erro ao buscar a piada.")
-
-# -------------------- WEATHER --------------------
-@bot.tree.command(name="weather", description="Mostra o clima de uma cidade")
-@app_commands.describe(city="Nome da cidade")
-async def weather_slash(interaction: discord.Interaction, city: str):
-    await interaction.response.defer()
-    
-    url = f"http://wttr.in/{city}?format=j1&lang=pt"
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    current = data['current_condition'][0]
-                    temp = current['temp_C']
-                    desc = current['weatherDesc'][0]['value']
-                    humidity = current['humidity']
-                    wind = current['windspeedKmph']
-
-                    embed = discord.Embed(
-                        title=f"🌤️ Clima em {city.capitalize()}",
-                        description=f"{desc}",
-                        color=discord.Color.blue()
-                    )
-                    embed.add_field(name="Temperatura", value=f"{temp}°C")
-                    embed.add_field(name="Umidade", value=f"{humidity}%")
-                    embed.add_field(name="Vento", value=f"{wind} km/h")
-                    await interaction.followup.send(embed=embed)
-                else:
-                    await interaction.followup.send(f"❌ Não consegui encontrar a cidade `{city}`.")
-    except Exception as e:
-        print(f"Erro weather: {e}")
-        await interaction.followup.send("❌ Ocorreu um erro ao buscar o clima.")
-
 
 
 # -------------------- FACT --------------------
@@ -1312,7 +1330,6 @@ async def help_slash(interaction: discord.Interaction):
         ("/trivia ou &trivia", "Perguntas e respostas"),
         ("/randomgif ou &randomgif", "GIFs aleatórios"),
         ("/piada ou &piada", "Conta uma piada"),
-        ("/weather ou &weather", "Mostra o clima"),
         ("/fact ou &fact", "Fato aleatório"),
         ("/flip ou &flip", "Cara ou coroa"),
         ("/clownboo ou &clownboo", "Frase do bot"),
@@ -1338,7 +1355,6 @@ async def help(ctx):
         ("/trivia ou &trivia", "Perguntas e respostas"),
         ("/randomgif ou &randomgif", "GIFs aleatórios"),
         ("/piada ou &piada", "Conta uma piada"),
-        ("/weather ou &weather", "Mostra o clima"),
         ("/fact ou &fact", "Fato aleatório"),
         ("/flip ou &flip", "Cara ou coroa"),
         ("/clownboo ou &clownboo", "Frase do bot"),
