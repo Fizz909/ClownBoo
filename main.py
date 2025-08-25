@@ -655,14 +655,6 @@ async def ship(ctx, user1: discord.Member = None, user2: discord.Member = None):
 
 #-----TRIVIA---
 
-import discord
-from discord import app_commands
-from discord.ext import commands
-import aiohttp
-import asyncio
-import random
-from typing import Dict
-
 # Dicionário para controlar trivias ativas
 trivias_ativas: Dict[int, bool] = {}
 MAX_TRIVIAS_SIMULTANEAS = 2
@@ -767,6 +759,65 @@ class TriviaButton(discord.ui.Button):
         
         await interaction.response.edit_message(embed=embed, view=self.view)
 
+# Dicionário para controlar trivias ativas
+trivias_ativas: Dict[int, bool] = {}
+MAX_TRIVIAS_SIMULTANEAS = 2
+
+class TriviaView(discord.ui.View):
+    def __init__(self, opcoes: list, resposta_correta: str, timeout: float = 30.0):
+        super().__init__(timeout=timeout)
+        self.opcoes = opcoes
+        self.resposta_correta = resposta_correta
+        self.resposta_usuario = None
+        self.correta = False
+        
+        # Criar botões para cada opção
+        for i, opcao in enumerate(opcoes):
+            self.add_item(TriviaButton(opcao, i, resposta_correta))
+
+class TriviaButton(discord.ui.Button):
+    def __init__(self, opcao: str, index: int, resposta_correta: str):
+        super().__init__(
+            label=f"Opção {index + 1}",
+            style=discord.ButtonStyle.primary,
+            custom_id=f"trivia_{index}"
+        )
+        self.opcao = opcao
+        self.index = index
+        self.resposta_correta = resposta_correta
+
+    async def callback(self, interaction: discord.Interaction):
+        # Desabilitar todos os botões
+        for item in self.view.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+                if item.custom_id == f"trivia_{self.index}":
+                    if self.opcao == self.resposta_correta:
+                        item.style = discord.ButtonStyle.success
+                        self.view.correta = True
+                    else:
+                        item.style = discord.ButtonStyle.danger
+        
+        self.view.resposta_usuario = self.opcao
+        self.view.stop()
+
+        # Criar novo embed baseado no antigo
+        old_embed = interaction.message.embeds[0]
+        embed = discord.Embed(
+            title=old_embed.title,
+            description=old_embed.description,
+            color=discord.Color.green() if self.opcao == self.resposta_correta else discord.Color.red()
+        )
+        for field in old_embed.fields:
+            embed.add_field(name=field.name, value=field.value, inline=field.inline)
+
+        if self.opcao == self.resposta_correta:
+            embed.set_footer(text="✅ Resposta correta!")
+        else:
+            embed.set_footer(text=f"❌ Resposta correta: {self.resposta_correta}")
+        
+        await interaction.response.edit_message(embed=embed, view=self.view)
+
 @bot.tree.command(name="trivia", description="Jogo de perguntas e respostas em português")
 @app_commands.describe(perguntas="Número de perguntas (padrão: 3)")
 async def trivia_slash(interaction: discord.Interaction, perguntas: int = 3):
@@ -779,12 +830,14 @@ async def trivia_slash(interaction: discord.Interaction, perguntas: int = 3):
         )
         return
     
-    # Registrar trivia ativa
+    # Registrar trivia ativa para o usuário
     trivias_ativas[interaction.user.id] = True
-    
+
+    # Garantir no máximo 10 perguntas
     if perguntas > 10:
         perguntas = 10
-        await interaction.response.send_message("Máximo de 10 perguntas definido.", ephemeral=True)
+        await interaction.response.defer(ephemeral=True)
+        await interaction.followup.send("⚠️ Máximo de 10 perguntas definido.")
         return
     
     await interaction.response.defer()
@@ -799,12 +852,12 @@ async def trivia_slash(interaction: discord.Interaction, perguntas: int = 3):
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as resp:
                     if resp.status != 200:
-                        await interaction.followup.send("<:pd:1407523919283355882> Erro ao buscar perguntas da API brasileira.")
+                        await interaction.followup.send("❌ Erro ao buscar perguntas da API brasileira.")
                         break
                     
                     data = await resp.json()
                     if not data:
-                        await interaction.followup.send("<:pd:1407523919283355882> Nenhuma pergunta disponível na API.")
+                        await interaction.followup.send("❌ Nenhuma pergunta disponível na API.")
                         break
                     
                     pergunta_data = data[0]
@@ -848,20 +901,20 @@ async def trivia_slash(interaction: discord.Interaction, perguntas: int = 3):
                         resultados.append(f"❌ Pergunta {i+1}: Tempo esgotado")
                     else:
                         if view.correta:
-                            await interaction.followup.send("✅ **Acertou!** <a:pd2:1407524312923246632>")
+                            await interaction.followup.send("✅ **Acertou!** 🎉")
                             pontuacao += 1
-                            resultados.append(f"<a:pd2:1407524312923246632> Pergunta {i+1}: Acertou")
+                            resultados.append(f"✅ Pergunta {i+1}: Acertou")
                         else:
                             await interaction.followup.send(
-                                f"<:pd:1407523919283355882> **Errou!** A resposta correta era: **{resposta_correta}**"
+                                f"❌ **Errou!** A resposta correta era: **{resposta_correta}**"
                             )
-                            resultados.append(f"<:pd:1407523919283355882> Pergunta {i+1}: Errou")
+                            resultados.append(f"❌ Pergunta {i+1}: Errou")
             
             # Pequena pausa entre perguntas
             await asyncio.sleep(1)
             
     except Exception as e:
-        await interaction.followup.send(f"<:pd:1407523919283355882> Ocorreu um erro: {str(e)}")
+        await interaction.followup.send(f"⚠️ Ocorreu um erro: {str(e)}")
     
     finally:
         # Remover trivia ativa
@@ -869,7 +922,7 @@ async def trivia_slash(interaction: discord.Interaction, perguntas: int = 3):
     
     # Enviar resultado final
     resultado_final = discord.Embed(
-        title="<:pd3:1407525193487749240> **Resultado Final** <:pd3:1407525193487749240>",
+        title="🏆 **Resultado Final** 🏆",
         description=f"**Pontuação: {pontuacao}/{perguntas}**",
         color=discord.Color.gold()
     )
@@ -889,12 +942,13 @@ async def trivia_slash(interaction: discord.Interaction, perguntas: int = 3):
         inline=False
     )
     
-    resultado_final.set_footer(text="Obrigado por jogar! <:pd3:1407525193487749240>")
+    resultado_final.set_footer(text="Obrigado por jogar! 🎉")
     
     await interaction.followup.send(embed=resultado_final)
 
-@bot.command()
-async def trivia(ctx, perguntas: int = 3):
+
+@bot.command(name="trivia")
+async def trivia_prefix(ctx, perguntas: int = 3):
     # Verificar limite de trivias simultâneas
     trivias_ativas_count = sum(1 for active in trivias_ativas.values() if active)
     if trivias_ativas_count >= MAX_TRIVIAS_SIMULTANEAS:
@@ -903,12 +957,13 @@ async def trivia(ctx, perguntas: int = 3):
         )
         return
     
-    # Registrar trivia ativa
+    # Registrar trivia ativa para o usuário
     trivias_ativas[ctx.author.id] = True
-    
+
+    # Garantir no máximo 10 perguntas
     if perguntas > 10:
         perguntas = 10
-        await ctx.send("Máximo de 10 perguntas definido.")
+        await ctx.send("⚠️ Máximo de 10 perguntas definido.")
         return
     
     pontuacao = 0
@@ -921,12 +976,12 @@ async def trivia(ctx, perguntas: int = 3):
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as resp:
                     if resp.status != 200:
-                        await ctx.send("<:pd:1407523919283355882> Erro ao buscar perguntas na API")
+                        await ctx.send("❌ Erro ao buscar perguntas da API brasileira.")
                         break
                     
                     data = await resp.json()
                     if not data:
-                        await ctx.send("<:pd:1407523919283355882> Nenhuma pergunta disponível na API.")
+                        await ctx.send("❌ Nenhuma pergunta disponível na API.")
                         break
                     
                     pergunta_data = data[0]
@@ -958,7 +1013,7 @@ async def trivia(ctx, perguntas: int = 3):
                     view = TriviaView(opcoes, resposta_correta)
                     
                     # Enviar pergunta com botões
-                    msg = await ctx.send(embed=embed, view=view)
+                    await ctx.send(embed=embed, view=view)
                     
                     # Esperar resposta
                     timed_out = await view.wait()
@@ -970,20 +1025,20 @@ async def trivia(ctx, perguntas: int = 3):
                         resultados.append(f"❌ Pergunta {i+1}: Tempo esgotado")
                     else:
                         if view.correta:
-                            await ctx.send("✅ **Acertou!** <a:pd2:1407524312923246632>")
+                            await ctx.send("✅ **Acertou!** 🎉")
                             pontuacao += 1
-                            resultados.append(f"<a:pd2:1407524312923246632> Pergunta {i+1}: Acertou")
+                            resultados.append(f"✅ Pergunta {i+1}: Acertou")
                         else:
                             await ctx.send(
-                                f"<:pd:1407523919283355882> **Errou!** A resposta correta era: **{resposta_correta}**"
+                                f"❌ **Errou!** A resposta correta era: **{resposta_correta}**"
                             )
-                            resultados.append(f"<:pd:1407523919283355882> Pergunta {i+1}: Errou")
+                            resultados.append(f"❌ Pergunta {i+1}: Errou")
             
             # Pequena pausa entre perguntas
             await asyncio.sleep(1)
             
     except Exception as e:
-        await ctx.send(f"<:pd:1407523919283355882> Ocorreu um erro: {str(e)}")
+        await ctx.send(f"⚠️ Ocorreu um erro: {str(e)}")
     
     finally:
         # Remover trivia ativa
@@ -991,7 +1046,7 @@ async def trivia(ctx, perguntas: int = 3):
     
     # Enviar resultado final
     resultado_final = discord.Embed(
-        title="<a:pd2:1407524312923246632> **Resultado Final** <a:pd2:1407524312923246632>",
+        title="🏆 **Resultado Final** 🏆",
         description=f"**Pontuação: {pontuacao}/{perguntas}**",
         color=discord.Color.gold()
     )
@@ -1011,9 +1066,10 @@ async def trivia(ctx, perguntas: int = 3):
         inline=False
     )
     
-    resultado_final.set_footer(text="Obrigado por jogar! <:pd3:1407525193487749240>")
+    resultado_final.set_footer(text="Obrigado por jogar! 🎉")
     
     await ctx.send(embed=resultado_final)
+
 
 @bot.tree.command(name="randomgif", description="Envia um GIF aleatório")
 @app_commands.describe(termo="Termo para buscar o GIF")
