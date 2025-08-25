@@ -244,7 +244,7 @@ async def meme_bomb_slash(interaction: discord.Interaction, amount: int = 5):
         )
     else:
         await interaction.response.send_message(
-            f"→ Preparando {amount} memes para você...", ephemeral=True
+            f"→ Preparando até {amount} memes para você...", ephemeral=True
         )
 
     # Buscar memes em paralelo
