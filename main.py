@@ -1165,7 +1165,7 @@ async def creditos(ctx):
 async def help_slash(interaction: discord.Interaction):
     embed = discord.Embed(title="📜 Comandos da ClownBoo", description="Lista de comandos disponíveis", color=discord.Color.green())
     cmds = [
-        ("/meme ou &meme", "Mostra um meme aleatório"),
+     ("/meme ou &meme", "Mostra um meme aleatório"),
         ("/memebomb", "Envia vários memes de uma vez (pode pular memes)"),
         ("/dailymeme ou &dailymeme", "Receba seu meme diário"),
         ("/memeroulette ou &memeroulette", "Roleta de memes"),
@@ -1174,6 +1174,9 @@ async def help_slash(interaction: discord.Interaction):
         ("/randomgif ou &randomgif", "GIFs aleatórios"),
         ("/piada ou &piada", "Conta uma piada"),
         ("/charada ou &charada", "Charada aleatório"),
+        ("/suggest", "Manda suggestão pro servidor"),
+        ("/setsuggestlog", "Define o canal onde sugestões serão enviadas (somente admins)"),
+        ("/snake", "Jogo da cobrinha no ClownBoo"),
         ("/flip ou &flip", "Cara ou coroa"),
         ("/clownboo ou &clownboo", "Frase do bot"),
         ("/rankclown ou &rankclown", "Ranking de usos"),
@@ -1198,6 +1201,9 @@ async def help(ctx):
         ("/randomgif ou &randomgif", "GIFs aleatórios"),
         ("/piada ou &piada", "Conta uma piada"),
         ("/charada ou &charada", "Charada aleatório"),
+        ("/suggest", "Manda suggestão pro servidor"),
+        ("/setsuggestlog", "Define o canal onde sugestões serão enviadas (somente admins)"),
+        ("/snake", "Jogo da cobrinha no ClownBoo"),
         ("/flip ou &flip", "Cara ou coroa"),
         ("/clownboo ou &clownboo", "Frase do bot"),
         ("/rankclown ou &rankclown", "Ranking de usos"),
