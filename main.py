@@ -653,423 +653,6 @@ async def ship(ctx, user1: discord.Member = None, user2: discord.Member = None):
 
     await ctx.send(file=file, embed=embed)
 
-#-----TRIVIA---
-
-# Dicionário para controlar trivias ativas
-trivias_ativas: Dict[int, bool] = {}
-MAX_TRIVIAS_SIMULTANEAS = 2
-
-class TriviaView(discord.ui.View):
-    def __init__(self, opcoes: list, resposta_correta: str, timeout: float = 30.0):
-        super().__init__(timeout=timeout)
-        self.opcoes = opcoes
-        self.resposta_correta = resposta_correta
-        self.resposta_usuario = None
-        self.correta = False
-        
-        # Criar botões para cada opção
-        for i, opcao in enumerate(opcoes):
-            self.add_item(TriviaButton(opcao, i, resposta_correta))
-
-class TriviaButton(discord.ui.Button):
-    def __init__(self, opcao: str, index: int, resposta_correta: str):
-        super().__init__(
-            label=f"Opção {index + 1}",
-            style=discord.ButtonStyle.primary,
-            custom_id=f"trivia_{index}"
-        )
-        self.opcao = opcao
-        self.index = index
-        self.resposta_correta = resposta_correta
-
-    async def callback(self, interaction: discord.Interaction):
-        # Desabilitar todos os botões
-        for item in self.view.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-                if item.custom_id == f"trivia_{self.index}":
-                    if self.opcao == self.resposta_correta:
-                        item.style = discord.ButtonStyle.success
-                        self.view.correta = True
-                    else:
-                        item.style = discord.ButtonStyle.danger
-        
-        self.view.resposta_usuario = self.opcao
-        self.view.stop()
-        
-        embed = interaction.message.embeds[0]
-        if self.opcao == self.resposta_correta:
-            embed.color = discord.Color.green()
-            embed.set_footer(text="<a:pd2:1407524312923246632> Resposta correta!")
-        else:
-            embed.color = discord.Color.red()
-            embed.set_footer(text=f"<:pd:1407523919283355882> Resposta correta: {self.resposta_correta}")
-        
-        await interaction.response.edit_message(embed=embed, view=self.view)
-
-# Dicionário para controlar trivias ativas
-trivias_ativas: Dict[int, bool] = {}
-MAX_TRIVIAS_SIMULTANEAS = 2
-
-class TriviaView(discord.ui.View):
-    def __init__(self, opcoes: list, resposta_correta: str, timeout: float = 30.0):
-        super().__init__(timeout=timeout)
-        self.opcoes = opcoes
-        self.resposta_correta = resposta_correta
-        self.resposta_usuario = None
-        self.correta = False
-        
-        # Criar botões para cada opção
-        for i, opcao in enumerate(opcoes):
-            self.add_item(TriviaButton(opcao, i, resposta_correta))
-
-class TriviaButton(discord.ui.Button):
-    def __init__(self, opcao: str, index: int, resposta_correta: str):
-        super().__init__(
-            label=f"Opção {index + 1}",
-            style=discord.ButtonStyle.primary,
-            custom_id=f"trivia_{index}"
-        )
-        self.opcao = opcao
-        self.index = index
-        self.resposta_correta = resposta_correta
-
-    async def callback(self, interaction: discord.Interaction):
-        # Desabilitar todos os botões
-        for item in self.view.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-                if item.custom_id == f"trivia_{self.index}":
-                    if self.opcao == self.resposta_correta:
-                        item.style = discord.ButtonStyle.success
-                        self.view.correta = True
-                    else:
-                        item.style = discord.ButtonStyle.danger
-        
-        self.view.resposta_usuario = self.opcao
-        self.view.stop()
-        
-        embed = interaction.message.embeds[0]
-        if self.opcao == self.resposta_correta:
-            embed.color = discord.Color.green()
-            embed.set_footer(text="✅ Resposta correta!")
-        else:
-            embed.color = discord.Color.red()
-            embed.set_footer(text=f"❌ Resposta correta: {self.resposta_correta}")
-        
-        await interaction.response.edit_message(embed=embed, view=self.view)
-
-# Dicionário para controlar trivias ativas
-trivias_ativas: Dict[int, bool] = {}
-MAX_TRIVIAS_SIMULTANEAS = 2
-
-class TriviaView(discord.ui.View):
-    def __init__(self, opcoes: list, resposta_correta: str, timeout: float = 30.0):
-        super().__init__(timeout=timeout)
-        self.opcoes = opcoes
-        self.resposta_correta = resposta_correta
-        self.resposta_usuario = None
-        self.correta = False
-        
-        # Criar botões para cada opção
-        for i, opcao in enumerate(opcoes):
-            self.add_item(TriviaButton(opcao, i, resposta_correta))
-
-class TriviaButton(discord.ui.Button):
-    def __init__(self, opcao: str, index: int, resposta_correta: str):
-        super().__init__(
-            label=f"Opção {index + 1}",
-            style=discord.ButtonStyle.primary,
-            custom_id=f"trivia_{index}"
-        )
-        self.opcao = opcao
-        self.index = index
-        self.resposta_correta = resposta_correta
-
-    async def callback(self, interaction: discord.Interaction):
-        # Desabilitar todos os botões
-        for item in self.view.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-                if item.custom_id == f"trivia_{self.index}":
-                    if self.opcao == self.resposta_correta:
-                        item.style = discord.ButtonStyle.success
-                        self.view.correta = True
-                    else:
-                        item.style = discord.ButtonStyle.danger
-        
-        self.view.resposta_usuario = self.opcao
-        self.view.stop()
-
-        # Criar novo embed baseado no antigo
-        old_embed = interaction.message.embeds[0]
-        embed = discord.Embed(
-            title=old_embed.title,
-            description=old_embed.description,
-            color=discord.Color.green() if self.opcao == self.resposta_correta else discord.Color.red()
-        )
-        for field in old_embed.fields:
-            embed.add_field(name=field.name, value=field.value, inline=field.inline)
-
-        if self.opcao == self.resposta_correta:
-            embed.set_footer(text="✅ Resposta correta!")
-        else:
-            embed.set_footer(text=f"❌ Resposta correta: {self.resposta_correta}")
-        
-        await interaction.response.edit_message(embed=embed, view=self.view)
-
-@bot.tree.command(name="trivia", description="Jogo de perguntas e respostas em português")
-@app_commands.describe(perguntas="Número de perguntas (padrão: 3)")
-async def trivia_slash(interaction: discord.Interaction, perguntas: int = 3):
-    # Verificar limite de trivias simultâneas
-    trivias_ativas_count = sum(1 for active in trivias_ativas.values() if active)
-    if trivias_ativas_count >= MAX_TRIVIAS_SIMULTANEAS:
-        await interaction.response.send_message(
-            f"❌ Limite de {MAX_TRIVIAS_SIMULTANEAS} trivias simultâneas atingido. Tente novamente em alguns instantes.",
-            ephemeral=True
-        )
-        return
-    
-    # Registrar trivia ativa para o usuário
-    trivias_ativas[interaction.user.id] = True
-
-    # Garantir no máximo 10 perguntas
-    if perguntas > 10:
-        perguntas = 10
-        await interaction.response.defer(ephemeral=True)
-        await interaction.followup.send("⚠️ Máximo de 10 perguntas definido.")
-        return
-    
-    await interaction.response.defer()
-    
-    pontuacao = 0
-    resultados = []
-    
-    try:
-        for i in range(perguntas):
-            # Usar API brasileira de quiz
-            url = "https://quiz-api-bwi5hjqyaq-uc.a.run.app/question?limit=1"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as resp:
-                    if resp.status != 200:
-                        await interaction.followup.send("❌ Erro ao buscar perguntas da API brasileira.")
-                        break
-                    
-                    data = await resp.json()
-                    if not data:
-                        await interaction.followup.send("❌ Nenhuma pergunta disponível na API.")
-                        break
-                    
-                    pergunta_data = data[0]
-                    pergunta = pergunta_data["question"]
-                    resposta_correta = pergunta_data["answer"]
-                    opcoes = pergunta_data["options"]
-                    
-                    # Embaralhar opções
-                    random.shuffle(opcoes)
-                    
-                    # Criar embed para a pergunta
-                    embed = discord.Embed(
-                        title=f"📚 Pergunta {i+1}/{perguntas}",
-                        description=f"**{pergunta}**",
-                        color=discord.Color.blue()
-                    )
-                    
-                    # Adicionar opções
-                    for idx, opt in enumerate(opcoes):
-                        embed.add_field(
-                            name=f"🔹 Opção {idx+1}",
-                            value=opt,
-                            inline=False
-                        )
-                    
-                    embed.set_footer(text="Clique em um botão para responder!")
-                    
-                    # Criar view com botões
-                    view = TriviaView(opcoes, resposta_correta)
-                    
-                    # Enviar pergunta com botões
-                    await interaction.followup.send(embed=embed, view=view)
-                    
-                    # Esperar resposta
-                    timed_out = await view.wait()
-                    
-                    if timed_out:
-                        await interaction.followup.send(
-                            f"⏰ Tempo esgotado! A resposta correta era: **{resposta_correta}**"
-                        )
-                        resultados.append(f"❌ Pergunta {i+1}: Tempo esgotado")
-                    else:
-                        if view.correta:
-                            await interaction.followup.send("✅ **Acertou!** 🎉")
-                            pontuacao += 1
-                            resultados.append(f"✅ Pergunta {i+1}: Acertou")
-                        else:
-                            await interaction.followup.send(
-                                f"❌ **Errou!** A resposta correta era: **{resposta_correta}**"
-                            )
-                            resultados.append(f"❌ Pergunta {i+1}: Errou")
-            
-            # Pequena pausa entre perguntas
-            await asyncio.sleep(1)
-            
-    except Exception as e:
-        await interaction.followup.send(f"⚠️ Ocorreu um erro: {str(e)}")
-    
-    finally:
-        # Remover trivia ativa
-        trivias_ativas.pop(interaction.user.id, None)
-    
-    # Enviar resultado final
-    resultado_final = discord.Embed(
-        title="🏆 **Resultado Final** 🏆",
-        description=f"**Pontuação: {pontuacao}/{perguntas}**",
-        color=discord.Color.gold()
-    )
-    
-    if pontuacao == perguntas:
-        resultado_final.add_field(name="🎯 Desempenho", value="**PERFEITO!** 🌟", inline=False)
-    elif pontuacao >= perguntas * 0.7:
-        resultado_final.add_field(name="🎯 Desempenho", value="**Excelente!** 💪", inline=False)
-    elif pontuacao >= perguntas * 0.5:
-        resultado_final.add_field(name="🎯 Desempenho", value="**Bom!** 👍", inline=False)
-    else:
-        resultado_final.add_field(name="🎯 Desempenho", value="**Pode melhorar!** 📚", inline=False)
-    
-    resultado_final.add_field(
-        name="📊 Detalhes",
-        value="\n".join(resultados) if resultados else "Nenhum resultado",
-        inline=False
-    )
-    
-    resultado_final.set_footer(text="Obrigado por jogar! 🎉")
-    
-    await interaction.followup.send(embed=resultado_final)
-
-
-@bot.command(name="trivia")
-async def trivia_prefix(ctx, perguntas: int = 3):
-    # Verificar limite de trivias simultâneas
-    trivias_ativas_count = sum(1 for active in trivias_ativas.values() if active)
-    if trivias_ativas_count >= MAX_TRIVIAS_SIMULTANEAS:
-        await ctx.send(
-            f"❌ Limite de {MAX_TRIVIAS_SIMULTANEAS} trivias simultâneas atingido. Tente novamente em alguns instantes."
-        )
-        return
-    
-    # Registrar trivia ativa para o usuário
-    trivias_ativas[ctx.author.id] = True
-
-    # Garantir no máximo 10 perguntas
-    if perguntas > 10:
-        perguntas = 10
-        await ctx.send("⚠️ Máximo de 10 perguntas definido.")
-        return
-    
-    pontuacao = 0
-    resultados = []
-    
-    try:
-        for i in range(perguntas):
-            # Usar API brasileira de quiz
-            url = "https://quiz-api-bwi5hjqyaq-uc.a.run.app/question?limit=1"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as resp:
-                    if resp.status != 200:
-                        await ctx.send("❌ Erro ao buscar perguntas da API brasileira.")
-                        break
-                    
-                    data = await resp.json()
-                    if not data:
-                        await ctx.send("❌ Nenhuma pergunta disponível na API.")
-                        break
-                    
-                    pergunta_data = data[0]
-                    pergunta = pergunta_data["question"]
-                    resposta_correta = pergunta_data["answer"]
-                    opcoes = pergunta_data["options"]
-                    
-                    # Embaralhar opções
-                    random.shuffle(opcoes)
-                    
-                    # Criar embed para a pergunta
-                    embed = discord.Embed(
-                        title=f"📚 Pergunta {i+1}/{perguntas}",
-                        description=f"**{pergunta}**",
-                        color=discord.Color.blue()
-                    )
-                    
-                    # Adicionar opções
-                    for idx, opt in enumerate(opcoes):
-                        embed.add_field(
-                            name=f"🔹 Opção {idx+1}",
-                            value=opt,
-                            inline=False
-                        )
-                    
-                    embed.set_footer(text="Clique em um botão para responder!")
-                    
-                    # Criar view com botões
-                    view = TriviaView(opcoes, resposta_correta)
-                    
-                    # Enviar pergunta com botões
-                    await ctx.send(embed=embed, view=view)
-                    
-                    # Esperar resposta
-                    timed_out = await view.wait()
-                    
-                    if timed_out:
-                        await ctx.send(
-                            f"⏰ Tempo esgotado! A resposta correta era: **{resposta_correta}**"
-                        )
-                        resultados.append(f"❌ Pergunta {i+1}: Tempo esgotado")
-                    else:
-                        if view.correta:
-                            await ctx.send("✅ **Acertou!** 🎉")
-                            pontuacao += 1
-                            resultados.append(f"✅ Pergunta {i+1}: Acertou")
-                        else:
-                            await ctx.send(
-                                f"❌ **Errou!** A resposta correta era: **{resposta_correta}**"
-                            )
-                            resultados.append(f"❌ Pergunta {i+1}: Errou")
-            
-            # Pequena pausa entre perguntas
-            await asyncio.sleep(1)
-            
-    except Exception as e:
-        await ctx.send(f"⚠️ Ocorreu um erro: {str(e)}")
-    
-    finally:
-        # Remover trivia ativa
-        trivias_ativas.pop(ctx.author.id, None)
-    
-    # Enviar resultado final
-    resultado_final = discord.Embed(
-        title="🏆 **Resultado Final** 🏆",
-        description=f"**Pontuação: {pontuacao}/{perguntas}**",
-        color=discord.Color.gold()
-    )
-    
-    if pontuacao == perguntas:
-        resultado_final.add_field(name="🎯 Desempenho", value="**PERFEITO!** 🌟", inline=False)
-    elif pontuacao >= perguntas * 0.7:
-        resultado_final.add_field(name="🎯 Desempenho", value="**Excelente!** 💪", inline=False)
-    elif pontuacao >= perguntas * 0.5:
-        resultado_final.add_field(name="🎯 Desempenho", value="**Bom!** 👍", inline=False)
-    else:
-        resultado_final.add_field(name="🎯 Desempenho", value="**Pode melhorar!** 📚", inline=False)
-    
-    resultado_final.add_field(
-        name="📊 Detalhes",
-        value="\n".join(resultados) if resultados else "Nenhum resultado",
-        inline=False
-    )
-    
-    resultado_final.set_footer(text="Obrigado por jogar! 🎉")
-    
-    await ctx.send(embed=resultado_final)
-
 
 @bot.tree.command(name="randomgif", description="Envia um GIF aleatório")
 @app_commands.describe(termo="Termo para buscar o GIF")
@@ -1145,48 +728,75 @@ async def piada(ctx):
         await ctx.send("Ocorreu um erro ao buscar a piada.")
 
 
-# -------------------- FACT --------------------
-@bot.tree.command(name="fact", description="Mostra um fato aleatório")
-async def fact_slash(interaction: discord.Interaction):
-    await interaction.response.defer()
-    
-    url = "https://uselessfacts.jsph.pl/random.json?language=pt"
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    embed = discord.Embed(
-                        title="💡 Fato aleatório",
-                        description=data.get("text", "Não consegui pegar um fato..."),
-                        color=discord.Color.green()
-                    )
-                    await interaction.followup.send(embed=embed)
-                else:
-                    await interaction.followup.send("❌ Não consegui buscar um fato agora.")
-    except Exception as e:
-        print(f"Erro fact: {e}")
-        await interaction.followup.send("❌ Ocorreu um erro ao buscar um fato.")
+# ===== Controle diário =====
+# Guarda o número de charadas que cada usuário pegou por dia
+charadas_diarias = {}  # {user_id: {"date": "YYYY-MM-DD", "count": n}}
+MAX_CHARADAS_POR_DIA = 2
 
-@bot.command()
-async def fact(ctx):
-    url = "https://uselessfacts.jsph.pl/random.json?language=pt"
+def pode_pegar_charada(user_id: int) -> bool:
+    hoje = datetime.now().strftime("%Y-%m-%d")
+    if user_id not in charadas_diarias:
+        charadas_diarias[user_id] = {"date": hoje, "count": 0}
+    elif charadas_diarias[user_id]["date"] != hoje:
+        charadas_diarias[user_id] = {"date": hoje, "count": 0}
+    
+    return charadas_diarias[user_id]["count"] < MAX_CHARADAS_POR_DIA
+
+def registrar_charada(user_id: int):
+    charadas_diarias[user_id]["count"] += 1
+
+# ===== Função auxiliar =====
+async def enviar_charada(user):
+    url = "https://api-charadas.herokuapp.com/puzzle?lang=ptbr"
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     embed = discord.Embed(
-                        title="💡 Fato aleatório",
-                        description=data.get("text", "Não consegui pegar um fato..."),
-                        color=discord.Color.green()
+                        title="🧩 Charada Aleatória",
+                        color=discord.Color.red()
                     )
-                    await ctx.send(embed=embed)
+                    embed.add_field(name="❓ Pergunta", value=data.get('question', 'Não consegui pegar uma charada...'), inline=False)
+                    embed.add_field(name="💡 Resposta", value=f"||{data.get('answer','')}||", inline=False)
+                    return embed
                 else:
-                    await ctx.send("❌ Não consegui buscar um fato agora.")
+                    return None
     except Exception as e:
-        print(f"Erro fact: {e}")
-        await ctx.send("❌ Ocorreu um erro ao buscar um fato.")
+        print(f"Erro charada: {e}")
+        return None
+
+# ===== SLASH COMMAND =====
+@bot.tree.command(name="charada", description="Mostra uma charada aleatória (limite diário)")
+async def charada_slash(interaction: discord.Interaction):
+    user_id = interaction.user.id
+    if not pode_pegar_charada(user_id):
+        await interaction.response.send_message(f"❌ Você já usou suas {MAX_CHARADAS_POR_DIA} charadas hoje!", ephemeral=True)
+        return
+    
+    await interaction.response.defer()
+    embed = await enviar_charada(interaction.user)
+    if embed:
+        await interaction.followup.send(embed=embed)
+        registrar_charada(user_id)
+    else:
+        await interaction.followup.send("❌ Ocorreu um erro ao buscar a charada.")
+
+# ===== PREFIX COMMAND =====
+@bot.command()
+async def charada(ctx):
+    user_id = ctx.author.id
+    if not pode_pegar_charada(user_id):
+        await ctx.send(f"❌ Você já usou suas {MAX_CHARADAS_POR_DIA} charadas hoje!")
+        return
+    
+    embed = await enviar_charada(ctx.author)
+    if embed:
+        await ctx.send(embed=embed)
+        registrar_charada(user_id)
+    else:
+        await ctx.send("❌ Ocorreu um erro ao buscar a charada.")
+
 
 @bot.tree.command(name="flip", description="Jogo de cara ou coroa")
 async def flip_slash(interaction: discord.Interaction):
@@ -1383,10 +993,9 @@ async def help_slash(interaction: discord.Interaction):
         ("/memeroulette ou &memeroulette", "Roleta de memes"),
         ("/setmemechannel ou &setmemechannel", "Define canal de memes"),
         ("/ship ou &ship", "Compatibilidade entre usuários"),
-        ("/trivia ou &trivia", "Perguntas e respostas"),
         ("/randomgif ou &randomgif", "GIFs aleatórios"),
         ("/piada ou &piada", "Conta uma piada"),
-        ("/fact ou &fact", "Fato aleatório"),
+        ("/charada ou &charada", "Charada aleatório"),
         ("/flip ou &flip", "Cara ou coroa"),
         ("/clownboo ou &clownboo", "Frase do bot"),
         ("/rankclown ou &rankclown", "Ranking de usos"),
@@ -1408,10 +1017,9 @@ async def help(ctx):
         ("/memeroulette ou &memeroulette", "Roleta de memes"),
         ("/setmemechannel ou &setmemechannel", "Define canal de memes"),
         ("/ship ou &ship", "Compatibilidade entre usuários"),
-        ("/trivia ou &trivia", "Perguntas e respostas"),
         ("/randomgif ou &randomgif", "GIFs aleatórios"),
         ("/piada ou &piada", "Conta uma piada"),
-        ("/fact ou &fact", "Fato aleatório"),
+        ("/charada ou &charada", "Charada aleatório"),
         ("/flip ou &flip", "Cara ou coroa"),
         ("/clownboo ou &clownboo", "Frase do bot"),
         ("/rankclown ou &rankclown", "Ranking de usos"),
