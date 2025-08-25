@@ -727,9 +727,11 @@ async def piada(ctx):
         print(f"Erro ao buscar piada: {e}")
         await ctx.send("Ocorreu um erro ao buscar a piada.")
 
+# ===== Carregar charadas do arquivo JSON =====
+with open("charadas.json", "r", encoding="utf-8") as f:
+    charadas = json.load(f)
 
 # ===== Controle diário =====
-# Guarda o número de charadas que cada usuário pegou por dia
 charadas_diarias = {}  # {user_id: {"date": "YYYY-MM-DD", "count": n}}
 MAX_CHARADAS_POR_DIA = 2
 
@@ -746,57 +748,44 @@ def registrar_charada(user_id: int):
     charadas_diarias[user_id]["count"] += 1
 
 # ===== Função auxiliar =====
-async def enviar_charada(user):
-    url = "https://api-charadas.herokuapp.com/puzzle?lang=ptbr"
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    embed = discord.Embed(
-                        title="🧩 Charada Aleatória",
-                        color=discord.Color.red()
-                    )
-                    embed.add_field(name="❓ Pergunta", value=data.get('question', 'Não consegui pegar uma charada...'), inline=False)
-                    embed.add_field(name="💡 Resposta", value=f"||{data.get('answer','')}||", inline=False)
-                    return embed
-                else:
-                    return None
-    except Exception as e:
-        print(f"Erro charada: {e}")
-        return None
+def gerar_charada():
+    return random.choice(charadas)
 
-# ===== SLASH COMMAND =====
+# ===== Slash Command =====
 @bot.tree.command(name="charada", description="Mostra uma charada aleatória (limite diário)")
 async def charada_slash(interaction: discord.Interaction):
     user_id = interaction.user.id
     if not pode_pegar_charada(user_id):
         await interaction.response.send_message(f"❌ Você já usou suas {MAX_CHARADAS_POR_DIA} charadas hoje!", ephemeral=True)
         return
-    
-    await interaction.response.defer()
-    embed = await enviar_charada(interaction.user)
-    if embed:
-        await interaction.followup.send(embed=embed)
-        registrar_charada(user_id)
-    else:
-        await interaction.followup.send("❌ Ocorreu um erro ao buscar a charada.")
 
-# ===== PREFIX COMMAND =====
+    charada = gerar_charada()
+    embed = discord.Embed(
+        title="🧩 Charada Aleatória",
+        color=discord.Color.purple()
+    )
+    embed.add_field(name="❓ Pergunta", value=charada["question"], inline=False)
+    embed.add_field(name="💡 Resposta", value=f"||{charada['answer']}||", inline=False)
+    await interaction.response.send_message(embed=embed)
+    registrar_charada(user_id)
+
+# ===== Prefix Command =====
 @bot.command()
 async def charada(ctx):
     user_id = ctx.author.id
     if not pode_pegar_charada(user_id):
         await ctx.send(f"❌ Você já usou suas {MAX_CHARADAS_POR_DIA} charadas hoje!")
         return
-    
-    embed = await enviar_charada(ctx.author)
-    if embed:
-        await ctx.send(embed=embed)
-        registrar_charada(user_id)
-    else:
-        await ctx.send("❌ Ocorreu um erro ao buscar a charada.")
 
+    charada = gerar_charada()
+    embed = discord.Embed(
+        title="🧩 Charada Aleatória",
+        color=discord.Color.red()
+    )
+    embed.add_field(name="❓ Pergunta", value=charada["question"], inline=False)
+    embed.add_field(name="💡 Resposta", value=f"||{charada['answer']}||", inline=False)
+    await ctx.send(embed=embed)
+    registrar_charada(user_id)
 
 @bot.tree.command(name="flip", description="Jogo de cara ou coroa")
 async def flip_slash(interaction: discord.Interaction):
