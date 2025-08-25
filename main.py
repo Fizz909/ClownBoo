@@ -988,7 +988,7 @@ async def help_slash(interaction: discord.Interaction):
     embed = discord.Embed(title="📜 Comandos da ClownBoo", description="Lista de comandos disponíveis", color=discord.Color.green())
     cmds = [
         ("/meme ou &meme", "Mostra um meme aleatório"),
-        ("/memebomb ou &memebomb", "Envia vários memes de uma vez"),
+        ("/memebomb", "Envia vários memes de uma vez (pode pular memes)"),
         ("/dailymeme ou &dailymeme", "Receba seu meme diário"),
         ("/memeroulette ou &memeroulette", "Roleta de memes"),
         ("/setmemechannel ou &setmemechannel", "Define canal de memes"),
@@ -1012,7 +1012,7 @@ async def help(ctx):
     embed = discord.Embed(title="📜 Comandos da ClownBoo", description="Lista de comandos disponíveis", color=discord.Color.green())
     cmds = [
         ("/meme ou &meme", "Mostra um meme aleatório"),
-        ("/memebomb ou &memebomb", "Envia vários memes de uma vez"),
+        ("/memebomb", "Envia vários memes de uma vez (pode pular memes)"),
         ("/dailymeme ou &dailymeme", "Receba seu meme diário"),
         ("/memeroulette ou &memeroulette", "Roleta de memes"),
         ("/setmemechannel ou &setmemechannel", "Define canal de memes"),
