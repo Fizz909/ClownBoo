@@ -1,42 +1,55 @@
 [
-    {
-        "question": "Qual é o doce preferido dos noivos?",
-        "answer": "Bem-casado"
-    },
-    {
-        "question": "O que é, o que é: tem dentes mas não morde?",
-        "answer": "Pente"
-    },
-    {
-        "question": "O que é, o que é: quanto mais se tira, maior fica?",
-        "answer": "Buraco"
-    },
-    {
-        "question": "O que é que sempre cai em pé e corre deitado?",
-        "answer": "Chuva"
-    },
-    {
-        "question": "O que é que está sempre na frente de você, mas não pode ser visto?",
-        "answer": "O futuro"
-    },
-    {
-        "question": "O que é, o que é: nasce grande e morre pequeno?",
-        "answer": "Lápis"
-    },
-    {
-        "question": "O que é que quanto mais se lava, mais sujo fica?",
-        "answer": "Água"
-    },
-    {
-        "question": "O que é, o que é: cheio de buracos mas segura água?",
-        "answer": "Esponja"
-    },
-    {
-        "question": "O que é que sempre sobe e nunca desce?",
-        "answer": "Idade"
-    },
-    {
-        "question": "O que é que corre ao redor de uma casa mas não se mexe?",
-        "answer": "Cerca"
-    }
+    {"question": "Qual é o doce preferido dos noivos?", "answer": "Bem-casado"},
+    {"question": "O que é, o que é: tem dentes mas não morde?", "answer": "Pente"},
+    {"question": "O que é, o que é: quanto mais se tira, maior fica?", "answer": "Buraco"},
+    {"question": "O que é que sempre cai em pé e corre deitado?", "answer": "Chuva"},
+    {"question": "O que está sempre na frente de você, mas não pode ser visto?", "answer": "O futuro"},
+    {"question": "O que nasce grande e morre pequeno?", "answer": "Lápis"},
+    {"question": "O que quanto mais se lava, mais sujo fica?", "answer": "Água"},
+    {"question": "Cheio de buracos, mas segura água. O que é?", "answer": "Esponja"},
+    {"question": "O que sempre sobe e nunca desce?", "answer": "Idade"},
+    {"question": "O que corre ao redor de uma casa mas não se mexe?", "answer": "Cerca"},
+    {"question": "O que tem mãos, mas não pode aplaudir?", "answer": "Relógio"},
+    {"question": "O que tem cabeça, mas não pensa?", "answer": "Alfinete"},
+    {"question": "O que tem orelhas, mas não ouve?", "answer": "Milho"},
+    {"question": "O que é leve como uma pena, mas nem o homem mais forte consegue segurar por muito tempo?", "answer": "Respiração"},
+    {"question": "O que é que anda com os pés na cabeça?", "answer": "Piolho"},
+    {"question": "O que é que cai em pé e corre deitado?", "answer": "Chuva"},
+    {"question": "O que é invisível, mas você sente quando falta?", "answer": "Ar"},
+    {"question": "O que é que anda sempre deitado?", "answer": "Rolo de papel"},
+    {"question": "O que é que quanto mais se tira, mais aumenta?", "answer": "Buraco"},
+    {"question": "O que tem boca, mas não fala?", "answer": "Rio"},
+    {"question": "O que é que está no meio do ovo?", "answer": "V"},
+    {"question": "O que é que quanto mais se cresce, mais se encolhe?", "answer": "Velas"},
+    {"question": "O que é que quanto mais quente, mais frio fica?", "answer": "Geladeira"},
+    {"question": "O que é que anda sempre para frente, mas nunca anda para trás?", "answer": "Relógio"},
+    {"question": "O que é que quanto mais se tira, mais cresce?", "answer": "Buraco"},
+    {"question": "O que é que dá voltas ao redor da casa, mas não sai do lugar?", "answer": "Cerca"},
+    {"question": "O que é que quanto mais se tira, mais fica?", "answer": "Buraco"},
+    {"question": "O que é que sempre está molhado quando seca?", "answer": "Toalha"},
+    {"question": "O que é que sobe e nunca desce?", "answer": "Idade"},
+    {"question": "O que é que tem dentes, mas não morde?", "answer": "Pente"},
+    {"question": "O que é que tem chaves, mas não abre portas?", "answer": "Piano"},
+    {"question": "O que é que passa pela água sem se molhar?", "answer": "Sombra"},
+    {"question": "O que é que anda, mas não tem pernas?", "answer": "Relógio de ponteiros"},
+    {"question": "O que é que se quebra ao falar?", "answer": "Silêncio"},
+    {"question": "O que é que corre, mas não tem pernas?", "answer": "Rio"},
+    {"question": "O que é que quanto mais se tira, maior fica?", "answer": "Buraco"},
+    {"question": "O que é que se mexe sem pernas e fala sem boca?", "answer": "Telefone"},
+    {"question": "O que é que quanto mais se tira, mais aumenta?", "answer": "Buraco"},
+    {"question": "O que é que anda sem pés e voa sem asas?", "answer": "Tempo"},
+    {"question": "O que é que quanto mais cresce, menos se vê?", "answer": "Escuridão"},
+    {"question": "O que é que sempre cai, mas nunca se machuca?", "answer": "Chuva"},
+    {"question": "O que é que está cheio de buracos, mas ainda segura água?", "answer": "Esponja"},
+    {"question": "O que é que sobe mas nunca desce?", "answer": "Idade"},
+    {"question": "O que é que anda com a cabeça para baixo?", "answer": "Piolho"},
+    {"question": "O que é que tem olho, mas não vê?", "answer": "Agulha"},
+    {"question": "O que é que tem braço, mas não abraça?", "answer": "Cadeira"},
+    {"question": "O que é que anda sem sair do lugar?", "answer": "Relógio"},
+    {"question": "O que é que se quebra sem se tocar?", "answer": "Silêncio"},
+    {"question": "O que é que quanto mais se tira, mais aumenta?", "answer": "Buraco"},
+    {"question": "O que é que anda deitado e dorme em pé?", "answer": "Rolo de papel"},
+    {"question": "O que é que corre e não tem pernas?", "answer": "Rio"},
+    {"question": "O que é que tem dentes e não morde?", "answer": "Pente"}
 ]
+
